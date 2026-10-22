@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import * as vscode from 'vscode';
 import { readFile } from 'node:fs/promises';
-import { answerMessages, closeAll, exists, file, open, setText, waitFor } from './helpers.ts';
+import { answerMessages, closeAll, exists, file, lf, open, setText, waitFor } from './helpers.ts';
 
 // Write by Hand (N4): a change synthesis cannot anchor hands over a draft; finished by
 // hand and sent back with Continue Generate, it becomes the patch. Needs a core of
@@ -54,7 +54,8 @@ suite('write by hand', () => {
       );
       const start = draft.selection.active.line;
       assert.equal(draft.document.lineAt(start).text, '# match cpp', 'the cursor is on the starting hunk');
-      assert.match(draft.document.getText(), /^Sir: 2\nTarget: src\/twins\.cc\n/);
+      // a new document takes the line endings of the platform: CRLF on Windows
+      assert.match(lf(draft.document.getText()), /^Sir: 2\nTarget: src\/twins\.cc\n/);
       assert.equal(await exists(patch), false, 'nothing is written before Continue Generate');
 
       // the starting hunk, replaced by one that tells the two blocks apart
@@ -63,8 +64,8 @@ suite('write by hand', () => {
       await vscode.commands.executeCommand('sir.continueGenerate', draft.document.uri);
 
       const text = await waitFor('the patch on disk', async () => ((await exists(patch)) ? readFile(patch.fsPath, 'utf8') : undefined));
-      assert.ok(text.includes(HAND_HUNK.trimEnd()), 'the hunk written by hand is in the patch byte for byte');
-      assert.match(text, /^Sir: 2\nTarget: src\/twins\.cc\n/);
+      assert.ok(lf(text).includes(HAND_HUNK.trimEnd()), 'the hunk written by hand is in the patch byte for byte');
+      assert.match(lf(text), /^Sir: 2\nTarget: src\/twins\.cc\n/);
       assert.ok(kept.startsWith('Sir: 2'));
       await waitFor('the draft closed', () => !vscode.workspace.textDocuments.some((d) => d.uri.toString() === draftUri));
     } finally {

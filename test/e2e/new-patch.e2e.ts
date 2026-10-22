@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import * as vscode from 'vscode';
-import { closeAll, exists, file, generated, waitFor } from './helpers.ts';
+import { closeAll, exists, file, generated, lf, waitFor } from './helpers.ts';
 
 // New S.I.R Patch (N2): from the Explorer's context menu the command gets the file's URI,
 // as here. The patch opens unsaved at the place the core names, and reaches the disk on
@@ -23,7 +23,8 @@ suite('new patch', () => {
     await vscode.commands.executeCommand('sir.newPatch', code);
 
     const editor = await draftOf(patch);
-    const text = editor.document.getText();
+    // a new document takes the line endings of the platform: CRLF on Windows
+    const text = lf(editor.document.getText());
     // protocol 5: the core's whole header (the base is git: Base-Blob too); protocol 4: Sir and Target
     assert.match(
       text,
@@ -74,6 +75,6 @@ suite('new patch', () => {
   test('a project over an upstream: the patch tree, Target from the upstream root', async () => {
     await vscode.commands.executeCommand('sir.newPatch', file('proj', 'up', 'src', 'd.cc'));
     const editor = await draftOf(file('proj', 'patches', 'src', 'd.cc.sirp'));
-    assert.match(editor.document.getText(), /^Sir: 2\nTarget: src\/d\.cc\n/);
+    assert.match(lf(editor.document.getText()), /^Sir: 2\nTarget: src\/d\.cc\n/);
   });
 });

@@ -40,6 +40,9 @@ export async function waitFor<T>(what: string, probe: () => T | undefined | fals
 
 export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
+/** The text with every CRLF as LF: a new document takes the line endings of the platform. */
+export const lf = (text: string): string => text.replace(/\r\n/g, '\n');
+
 export async function open(uri: vscode.Uri, column = vscode.ViewColumn.One): Promise<vscode.TextEditor> {
   const document = await vscode.workspace.openTextDocument(uri);
   return vscode.window.showTextDocument(document, { viewColumn: column, preview: false });
