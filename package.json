@@ -2,7 +2,7 @@
   "name": "sir-vscode",
   "displayName": "S.I.R Patches",
   "description": "Write and maintain structure-aware patches over upstream code: generate a .sirp patch from your edits, see where every hunk lands, and move between the patch and the code",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "danil-varakin",
   "license": "MIT",
   "galleryBanner": {
