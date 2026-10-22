@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { HatchDeps } from '../deps.ts';
+import type { SirDeps } from '../deps.ts';
 import type { Repair } from '../feedback/repairs.ts';
 import { earlierHunkOf } from '../feedback/repairs.ts';
 import { showBaselineOffset, showMdLine } from '../navigation/show.ts';
@@ -9,8 +9,8 @@ import { COMMANDS } from './ids.ts';
 
 const REPAIRS: ReadonlySet<string> = new Set<Repair>(['show-how-far', 'show-candidates', 'go-to-earlier', 'regenerate', 'delete-patch']);
 
-/** `hatch.repair` — what a light bulb action runs: `hunk` from 0, or -1 for the patch as a whole. */
-export async function repair(deps: HatchDeps, mdUri: unknown, hunk: unknown, what: unknown): Promise<void> {
+/** `sir.repair` — what a light bulb action runs: `hunk` from 0, or -1 for the patch as a whole. */
+export async function repair(deps: SirDeps, mdUri: unknown, hunk: unknown, what: unknown): Promise<void> {
   if (!(mdUri instanceof vscode.Uri) || typeof hunk !== 'number' || typeof what !== 'string' || !REPAIRS.has(what)) return;
   try {
     if (what === 'delete-patch') {

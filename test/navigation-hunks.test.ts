@@ -5,6 +5,7 @@ import type { HunkLink } from '../src/service/protocol.ts';
 import {
   hunkAtMdLine,
   hunkAtOffset,
+  placedCount,
   stillMatches,
   translateByLines,
   trimmed,
@@ -96,6 +97,11 @@ test('a hunk the core could not place never counts as matching', () => {
   assert.equal(stillMatches(hunk(0, { status: 'no-match' }), 'anything'), false);
 });
 
+test('only a hunk that resolved counts as placed: not one that matched nowhere, nor in several places', () => {
+  const table = [hunk(0), hunk(1, { status: 'no-match' }), hunk(2, { status: 'ambiguous' }), hunk(3, { status: 'error' }), hunk(4)];
+  assert.equal(placedCount(table), 2);
+});
+
 test('a drifted position is carried over by finding its line again', () => {
   const applied = 'a\nb\ntarget()\nc\n';
   const buffer = 'header\nheader\na\nb\ntarget()\nc\n';
@@ -110,4 +116,79 @@ test('a line that no longer exists translates to nothing, not to a guess', () =>
 
 test('a blank line identifies nothing and refuses to translate', () => {
   assert.equal(translateByLines('a\n\nb\n', 'a\n\nb\n', 2), undefined);
+});
+
+test('the nearest hunk is found by its place, whatever order the table lists them in', () => {
+  const reversed = [...TABLE].reverse();
+  const past = hunkAtMdLine(reversed, 400);
+  assert.equal(past.kind === 'nearest' && past.hunk.index, 1, 'past the last: the one that ends lowest');
+  const after = hunkAtOffset(reversed, 200, 'final');
+  assert.equal(after.kind === 'nearest' && after.hunk.index, 1, 'below every hunk: the one just above');
+  const before = hunkAtOffset(reversed, 0, 'final');
+  assert.equal(before.kind === 'nearest' && before.hunk.index, 0, 'above every hunk: the first');
+});
+
+// ---- what mutation testing found unchecked (docs/15-test-plan.md, stage 2) ----
+
+test('between hunks the nearest below is the next one, not the last', () => {
+  const three = [...TABLE, hunk(2, { mdSpan: [25, 30] })];
+  const hit = hunkAtMdLine(three, 10);
+  assert.equal(hit.kind === 'nearest' && hit.hunk.index, 1);
+  const listedLastFirst = hunkAtMdLine([...three].reverse(), 10);
+  assert.equal(listedLastFirst.kind === 'nearest' && listedLastFirst.hunk.index, 1, 'whatever the order of the table');
+});
+
+test('two hunks starting on the same line: the one listed first is taken', () => {
+  const tied = [hunk(0, { mdSpan: [12, 18] }), hunk(1, { mdSpan: [12, 15] })];
+  const below = hunkAtMdLine(tied, 10);
+  assert.equal(below.kind === 'nearest' && below.hunk.index, 0, 'below the line');
+  const past = hunkAtMdLine(tied, 400);
+  assert.equal(past.kind === 'nearest' && past.hunk.index, 0, 'past the last');
+});
+
+test('a hunk with a final span but no final text, or the other way round, does not match', () => {
+  const text = 'void a() {\n  two();\n}\n';
+  assert.equal(stillMatches(hunk(0, { final: { start: 11, end: 19 } }), text), false);
+  assert.equal(stillMatches(hunk(0, { finalText: '  two();' }), text), false);
+});
+
+test('an offset is translated from the very start up to the very end of the text, and not one past', () => {
+  const applied = 'a\nxb';
+  const buffer = 'h\na\nxb';
+  assert.equal(translateByLines(applied, buffer, -1), undefined);
+  assert.equal(translateByLines(applied, buffer, applied.length + 1), undefined);
+  assert.equal(translateByLines(applied, buffer, 0), buffer.indexOf('a'));
+  assert.equal(translateByLines(applied, buffer, applied.length), buffer.length);
+});
+
+test('a line of spaces identifies nothing either', () => {
+  assert.equal(translateByLines('a\n   \nb\n', 'a\n   \nb\n', 3), undefined);
+});
+
+test('of two copies of the line, the one nearer to where it was is taken', () => {
+  const applied = 'x\nx\nx\nx\ntarget\n';
+  const buffer = 'target\nx\nx\nx\nx\ntarget\n';
+  assert.equal(translateByLines(applied, buffer, applied.indexOf('target')), buffer.lastIndexOf('target'));
+});
+
+test('a copy just above wins over one farther below', () => {
+  const applied = 'a\nb\nc\ntarget\n';
+  const buffer = 'a\nb\ntarget\nc\nd\ntarget\n';
+  assert.equal(translateByLines(applied, buffer, applied.indexOf('target')), buffer.indexOf('target'));
+});
+
+test('of two copies as near as each other, the upper one is taken', () => {
+  const applied = 'x\ntarget\nx\n';
+  const buffer = 'target\nx\ntarget\n';
+  assert.equal(translateByLines(applied, buffer, applied.indexOf('target')), 0);
+});
+
+test('the last line of the buffer is searched too', () => {
+  assert.equal(translateByLines('a\ntarget', 'b\nc\ntarget', 2), 'b\nc\n'.length);
+});
+
+test('tabs and carriage returns are trimmed like spaces and newlines', () => {
+  const text = '\t x \r\n';
+  const tight = trimmed(text, { start: 0, end: text.length });
+  assert.equal(text.slice(tight.start, tight.end), 'x');
 });

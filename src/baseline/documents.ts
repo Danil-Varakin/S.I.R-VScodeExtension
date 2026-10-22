@@ -12,7 +12,7 @@ import { readText } from '../workspace-fs.ts';
  * produced address the text they were measured in. The revision — the commit, or nothing
  * for the saved file — is the query, so the same file at two commits is two documents.
  */
-export const BASELINE_SCHEME = 'hatch-baseline';
+export const BASELINE_SCHEME = 'sir-baseline';
 
 /** Git baselines and saved ones an index holds; a handful per open patch. */
 const MAX_TEXTS = 32;
@@ -32,7 +32,7 @@ export function sourceOfBaseline(baseline: vscode.Uri): vscode.Uri {
 }
 
 /**
- * Serves the `hatch-baseline` documents. Each holds exactly the text an index was built
+ * Serves the `sir-baseline` documents. Each holds exactly the text an index was built
  * against: the index hands it over (`hold`) when it is built, and again right before a
  * document is shown, so an entry pushed out meanwhile is back before anyone reads it —
  * and a baseline that moved on disk is replaced in the open diff, not left behind it.
@@ -77,7 +77,7 @@ export class BaselineDocuments implements vscode.Disposable {
 async function unheld(uri: vscode.Uri): Promise<string> {
   if (uri.query === '') return readText(sourceOfBaseline(uri));
   throw new Error(
-    `hatch: the base of ${sourceOfBaseline(uri).fsPath} at ${uri.query.slice(0, 7)} is no longer held; ` +
-      'open it again with Hatch: Go to What the Hunk Replaces',
+    `sir: the base of ${sourceOfBaseline(uri).fsPath} at ${uri.query.slice(0, 7)} is no longer held; ` +
+      'open it again with S.I.R: Go to What the Hunk Replaces',
   );
 }

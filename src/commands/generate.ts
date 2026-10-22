@@ -1,18 +1,18 @@
 import * as vscode from 'vscode';
 import { basename } from 'node:path';
-import type { GenerateParams, GenerateResult, GitSourceParams } from '../service/protocol.ts';
+import type { GenerateParamsV5, GenerateResult, GitSourceParams } from '../service/protocol.ts';
 import { ERROR_KIND, originKind } from '../service/protocol.ts';
-import type { HatchDeps } from '../deps.ts';
+import type { SirDeps } from '../deps.ts';
 import type { Log } from '../ui/log.ts';
 import { ACTIONS, COMMANDS } from './ids.ts';
-import { HatchServiceError, RequestCancelledError, UnsupportedDocumentError, errorMessage } from '../errors.ts';
+import { SirServiceError, RequestCancelledError, UnsupportedDocumentError, errorMessage } from '../errors.ts';
 import { activeFile } from '../active-file.ts';
 import { NoBaselineError, savedBaseline } from '../baseline/saved.ts';
 import { reveal } from '../ui/reveal.ts';
-import { offer, offerLog } from '../ui/notify.ts';
+import { choose, offer, offerLog } from '../ui/notify.ts';
 import { describeBase, effectiveBase } from '../project/base.ts';
 import { chosenEolOf } from '../project/project.ts';
-import { readLiveText, replaceText } from '../workspace-fs.ts';
+import { fileExists, readLiveText, replaceText } from '../workspace-fs.ts';
 import { overridesFrom } from '../settings.ts';
 import { clock } from '../duration.ts';
 import { notedHunks } from '../feedback/notes.ts';
@@ -21,8 +21,11 @@ import { destinationOf, questionFor } from '../feedback/destination.ts';
 import { isSupportedFile, unsupportedMessage } from '../project/languages.ts';
 import { PATCH_LANGUAGE } from '../patch-files.ts';
 import { keyLabel } from '../keys.ts';
+import { draftOf, keepProblemOf } from '../feedback/draft.ts';
+import type { Draft } from '../feedback/draft.ts';
+import { describePairReason } from '../feedback/pair-reason.ts';
 
-type GenerateDeps = Pick<HatchDeps, 'service' | 'project' | 'cache' | 'log'>;
+type GenerateDeps = Pick<SirDeps, 'service' | 'project' | 'cache' | 'log' | 'drafts'>;
 
 type Source =
   | { readonly kind: 'ok'; readonly document: vscode.TextDocument }
@@ -30,7 +33,7 @@ type Source =
   | { readonly kind: 'unsupported'; readonly scheme: string };
 
 /** The OLD version of one run: text we hold, or a revision the core reads out of git. */
-type Base =
+export type Base =
   | { readonly kind: 'text'; readonly text: string; readonly unchanged: string }
   | { readonly kind: 'git'; readonly git: GitSourceParams };
 
@@ -48,13 +51,13 @@ export function generateAgainstFile(deps: GenerateDeps, target?: vscode.Uri): Pr
 }
 
 /**
- * The base the core names for this file — `hatch.base.*` over `generate.base` — or, with
+ * The base the core names for this file — `sir.base.*` over `generate.base` — or, with
  * none named, the file as saved on disk. The saved file is read here and sent as text; a
  * git base is only named, and the core reads it.
  */
 async function projectBase(document: vscode.TextDocument, { project, log }: GenerateDeps): Promise<Base> {
   const config = await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Window, title: 'Hatch: reading the project config' },
+    { location: vscode.ProgressLocation.Window, title: 'S.I.R: reading the project config' },
     () => project.config(document.uri),
   );
   const base = effectiveBase(config, chosenEolOf(document.uri));
@@ -69,7 +72,7 @@ async function projectBase(document: vscode.TextDocument, { project, log }: Gene
       return {
         kind: 'text',
         text: await savedBaseline(document.uri),
-        unchanged: `hatch: ${basename(document.uri.fsPath)} has no unsaved changes`,
+        unchanged: `sir: ${basename(document.uri.fsPath)} has no unsaved changes`,
       };
   }
 }
@@ -92,21 +95,44 @@ async function pickedBase(document: vscode.TextDocument, { log }: GenerateDeps):
     kind: 'text',
     // as the editor has it, when it is open with edits of its own
     text: await readLiveText(old),
-    unchanged: `hatch: ${name} matches ${basename(old.fsPath)}, nothing to patch`,
+    unchanged: `sir: ${name} matches ${basename(old.fsPath)}, nothing to patch`,
   };
+}
+
+/**
+ * Continue Generate (N4): the run that gave up, again — the same code, the same base —
+ * with the draft finished by hand as `keep`. Its hunks are settled; synthesis goes on
+ * from them. All of it standing, the patch is written as by Generate Patch and the draft
+ * closed; another change it cannot anchor, and the draft is the next one.
+ */
+export async function continueGenerate(deps: GenerateDeps, target?: vscode.Uri): Promise<void> {
+  const draft =
+    target === undefined
+      ? vscode.window.activeTextEditor?.document
+      : vscode.workspace.textDocuments.find((d) => d.uri.toString() === target.toString());
+  const run = draft === undefined ? undefined : deps.drafts.runOf(draft);
+  if (draft === undefined || run === undefined) {
+    void vscode.window.showErrorMessage('sir: Continue Generate goes on from a draft of Write by Hand — this is not one');
+    return;
+  }
+  deps.drafts.clearProblems(draft);
+  await generate(deps, run.code, () => Promise.resolve(run.base), draft);
 }
 
 async function generate(
   deps: GenerateDeps,
   target: vscode.Uri | undefined,
   baseOf: (document: vscode.TextDocument, deps: GenerateDeps) => Promise<Base | undefined>,
+  /** Continue Generate: the draft whose text goes as `keep` */
+  draft?: vscode.TextDocument,
 ): Promise<void> {
   const { service, log } = deps;
   let document: vscode.TextDocument | undefined;
+  let base: Base | undefined;
   try {
     const source = await sourceOf(target);
     if (source.kind === 'none') {
-      void vscode.window.showErrorMessage('hatch: no active editor');
+      void vscode.window.showErrorMessage('sir: no active editor');
       return;
     }
     if (source.kind === 'unsupported') throw new UnsupportedDocumentError(source.scheme);
@@ -114,17 +140,17 @@ async function generate(
 
     if (document.languageId === PATCH_LANGUAGE) {
       void vscode.window.showErrorMessage(
-        `hatch: ${basename(document.uri.fsPath)} is a patch — generate from the file of code it patches (${keyLabel('toggle')} goes there)`,
+        `sir: ${basename(document.uri.fsPath)} is a patch — generate from the file of code it patches (${keyLabel('toggle')} goes there)`,
       );
       return;
     }
     const refusal = await unsupported(document, deps);
     if (refusal !== undefined) {
-      void vscode.window.showErrorMessage(`hatch: ${refusal}`);
+      void vscode.window.showErrorMessage(`sir: ${refusal}`);
       return;
     }
 
-    const base = await baseOf(document, deps);
+    base = await baseOf(document, deps);
     if (base === undefined) return;
 
     const newText = document.getText();
@@ -133,12 +159,69 @@ async function generate(
       return;
     }
 
-    const result = await synthesize(service, document, base, newText, log);
+    const result = await synthesize(service, document, base, newText, log, draft?.getText());
     if (result === undefined) return;
-    await deliver(result, document, deps);
+    const destination = await deliver(result, document, deps);
+    // only once its hunks are in the patch: kept by Open Existing, the hand work stays open
+    if (draft !== undefined && destination === 'write') await deps.drafts.close(draft);
   } catch (e) {
+    if (document !== undefined && base !== undefined && (await handedToDraft(e, document, base, draft, deps))) return;
     await report(e, document, log);
   }
+}
+
+/**
+ * What a run that gave up hands to a draft (N4), when the core gives one: a change it
+ * cannot anchor offers Write by Hand — or, in Continue Generate, becomes the next draft —
+ * and a hunk of the draft that does not stand is marked on its line. False: not ours,
+ * reported as any other failure.
+ */
+async function handedToDraft(
+  e: unknown,
+  document: vscode.TextDocument,
+  base: Base,
+  draft: vscode.TextDocument | undefined,
+  deps: GenerateDeps,
+): Promise<boolean> {
+  if (!(e instanceof SirServiceError)) return false;
+  const { log, drafts, service } = deps;
+  const run = { code: document.uri, base };
+  const next = e.kind === ERROR_KIND.synthesis ? draftOf(e.detail, (await service.ensureCompatible()).protocol) : undefined;
+
+  if (next !== undefined && draft !== undefined) {
+    log.info(`${e.message} — the next draft`);
+    await drafts.replace(draft, next, run);
+    void vscode.window.showWarningMessage(`sir: ${e.message} — write this hunk by hand too, then Continue Generate`);
+    return true;
+  }
+  if (next !== undefined) {
+    log.error(e.message);
+    const choice = await choose('error', `sir: ${e.message}`, [ACTIONS.writeByHand, ACTIONS.showLine]);
+    if (choice === ACTIONS.writeByHand) await writeByHand(next, run, deps);
+    else if (choice === ACTIONS.showLine && e.newLine !== undefined) await showLine(document, e.newLine);
+    return true;
+  }
+  const problem = draft === undefined ? undefined : keepProblemOf(e.detail);
+  if (draft !== undefined && problem !== undefined) {
+    log.error(e.message);
+    await drafts.problem(draft, problem.line, e.message);
+    void vscode.window.showErrorMessage(`sir: ${e.message}`);
+    return true;
+  }
+  return false;
+}
+
+/** Opens the draft at the place of the file's patch — bound to it when nothing is there yet. */
+async function writeByHand(draft: Draft, run: { code: vscode.Uri; base: Base }, { project, drafts, log }: GenerateDeps): Promise<void> {
+  const pair = await project.pair(run.code);
+  if (pair.kind !== 'code' || pair.patchPath === null) {
+    void vscode.window.showErrorMessage(`sir: ${describePairReason(pair.reason)}`);
+    return;
+  }
+  const place = vscode.Uri.file(pair.patchPath);
+  const exists = await fileExists(place);
+  await drafts.open(draft, run, exists ? undefined : place);
+  log.info(`draft for ${run.code.fsPath}: hunk ${draft.hunk} to write by hand${exists ? `, over ${place.fsPath}` : ''}`);
 }
 
 /**
@@ -146,13 +229,13 @@ async function generate(
  * language is named for it, by the settings or the config, which the core then takes.
  */
 async function unsupported(document: vscode.TextDocument, { service, project }: GenerateDeps): Promise<string | undefined> {
-  const { hatch, languages } = await service.version();
+  const { sir, languages } = await service.version();
   const path = document.uri.fsPath;
   if (isSupportedFile(path, languages)) return undefined;
   const named =
-    overridesFrom(vscode.workspace.getConfiguration('hatch', document.uri), vscode.workspace.isTrusted).language ??
+    overridesFrom(vscode.workspace.getConfiguration('sir', document.uri), vscode.workspace.isTrusted).language ??
     (await project.config(document.uri)).settings.language;
-  return named === null || named === undefined ? unsupportedMessage(path, hatch, languages) : undefined;
+  return named === null || named === undefined ? unsupportedMessage(path, sir, languages) : undefined;
 }
 
 async function sourceOf(target: vscode.Uri | undefined): Promise<Source> {
@@ -162,23 +245,25 @@ async function sourceOf(target: vscode.Uri | undefined): Promise<Source> {
 }
 
 async function synthesize(
-  service: HatchDeps['service'],
+  service: SirDeps['service'],
   document: vscode.TextDocument,
   base: Base,
   newText: string,
   log: Log,
+  keep?: string,
 ): Promise<GenerateResult | undefined> {
-  const params: GenerateParams = {
+  const params: GenerateParamsV5 = {
     ...(base.kind === 'text' ? { baseText: base.text } : { baseGit: base.git }),
     newText,
     path: document.uri.fsPath,
-    ...overridesFrom(vscode.workspace.getConfiguration('hatch', document.uri), vscode.workspace.isTrusted),
+    ...(keep !== undefined ? { keep } : {}),
+    ...overridesFrom(vscode.workspace.getConfiguration('sir', document.uri), vscode.workspace.isTrusted),
   };
 
   return vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Hatch: generating patch for ${basename(document.uri.fsPath)}`,
+      title: `S.I.R: generating patch for ${basename(document.uri.fsPath)}`,
       cancellable: true,
     },
     async (progress, token) => {
@@ -203,15 +288,15 @@ async function synthesize(
           log.info('generate cancelled');
           return undefined;
         }
-        if (e instanceof HatchServiceError && e.kind === ERROR_KIND.noChanges) {
+        if (e instanceof SirServiceError && e.kind === ERROR_KIND.noChanges) {
           // not a failure: the buffer is its base, as the language reads it
           const against = e.detail?.['baseSpec'];
           const name = basename(document.uri.fsPath);
           log.info(e.message);
           void vscode.window.showInformationMessage(
             typeof against === 'string'
-              ? `hatch: ${name} matches ${against}, nothing to patch`
-              : `hatch: ${name} matches its base, nothing to patch`,
+              ? `sir: ${name} matches ${against}, nothing to patch`
+              : `sir: ${name} matches its base, nothing to patch`,
           );
           return undefined;
         }
@@ -223,7 +308,7 @@ async function synthesize(
   );
 }
 
-async function deliver(result: GenerateResult, document: vscode.TextDocument, deps: GenerateDeps): Promise<void> {
+async function deliver(result: GenerateResult, document: vscode.TextDocument, deps: GenerateDeps): Promise<Destination> {
   const { log } = deps;
   log.info(describeConfig(result.config));
   for (const warning of result.warnings) log.info(`warning: ${warning}`);
@@ -232,15 +317,16 @@ async function deliver(result: GenerateResult, document: vscode.TextDocument, de
   const patchUri = vscode.Uri.file(result.outPath);
 
   const destination = await chooseDestination(patchUri, result, document, deps);
-  if (destination === 'abandon') return;
+  if (destination === 'abandon') return destination;
   if (destination === 'open-existing') {
     await openBeside(patchUri);
-    return;
+    return destination;
   }
 
   await writePatch(patchUri, result, log);
   await openBeside(patchUri);
   await reportOutcome(result, document, patchUri, log);
+  return destination;
 }
 
 /** Asks what `feedback/destination.ts` decided to ask, and reports the answer. */
@@ -293,7 +379,7 @@ async function placeOf(
 }
 
 async function writePatch(patchUri: vscode.Uri, result: GenerateResult, log: Log): Promise<void> {
-  // the core opens the .hatch with its header — Target among it — itself
+  // the core opens the .sirp with its header — Target among it — itself
   await replaceText(patchUri, result.patch);
   log.info(`wrote ${patchUri.fsPath}: ${result.hunks.length} hunk(s), language ${result.language ?? 'none'}`);
 }
@@ -306,7 +392,7 @@ async function reportOutcome(
 ): Promise<void> {
   if (!result.reproducesNew) {
     // what the patch does make of the base is the useful part, not the log
-    const message = `hatch: the patch does not reproduce ${basename(document.uri.fsPath)} exactly`;
+    const message = `sir: the patch does not reproduce ${basename(document.uri.fsPath)} exactly`;
     log.warn(message);
     if (await offer('warning', message, ACTIONS.previewResult)) {
       await vscode.commands.executeCommand(COMMANDS.previewPatch, patchUri);
@@ -315,7 +401,7 @@ async function reportOutcome(
   }
   if (result.warnings.length > 0) {
     await offerLog(
-      `hatch: generated ${result.hunks.length} hunk(s) with ${result.warnings.length} warning(s)`,
+      `sir: generated ${result.hunks.length} hunk(s) with ${result.warnings.length} warning(s)`,
       log,
       'warning',
     );
@@ -352,20 +438,20 @@ async function report(e: unknown, document: vscode.TextDocument | undefined, log
 
   if (e instanceof NoBaselineError) {
     // the same buffer, against a file picked by hand
-    if (await offer('error', `hatch: ${message}`, ACTIONS.generateAgainstFile)) {
+    if (await offer('error', `sir: ${message}`, ACTIONS.generateAgainstFile)) {
       await vscode.commands.executeCommand(COMMANDS.generateAgainstFile, document?.uri);
     }
     return;
   }
 
-  const line = e instanceof HatchServiceError && e.kind === ERROR_KIND.synthesis ? e.newLine : undefined;
+  const line = e instanceof SirServiceError && e.kind === ERROR_KIND.synthesis ? e.newLine : undefined;
   if (line !== undefined && document !== undefined) {
     // the change no pattern anchors: where it is in the buffer is the useful part
-    if (await offer('error', `hatch: ${message}`, ACTIONS.showLine)) await showLine(document, line);
+    if (await offer('error', `sir: ${message}`, ACTIONS.showLine)) await showLine(document, line);
     return;
   }
 
-  await offerLog(`hatch: ${message}`, log);
+  await offerLog(`sir: ${message}`, log);
 }
 
 async function showLine(document: vscode.TextDocument, line: number): Promise<void> {

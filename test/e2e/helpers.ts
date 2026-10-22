@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
 import { basename, join } from 'node:path';
-import type { HatchTestApi } from '../../src/extension.ts';
+import type { SirTestApi } from '../../src/extension.ts';
 
 // What every end-to-end test needs: the extension's test hooks, the fixture's paths,
 // waiting for state that arrives on its own time, and answering the dialogs a command
 // shows. The tests drive the extension only through its commands and what VS Code shows.
 
-export const EXTENSION_ID = 'danil-varakin.hatch-vscode';
+export const EXTENSION_ID = 'danil-varakin.sir-vscode';
 
-export async function api(): Promise<HatchTestApi> {
-  const extension = vscode.extensions.getExtension<HatchTestApi>(EXTENSION_ID);
+export async function api(): Promise<SirTestApi> {
+  const extension = vscode.extensions.getExtension<SirTestApi>(EXTENSION_ID);
   if (extension === undefined) throw new Error(`${EXTENSION_ID} is not installed in the test host`);
   return extension.activate();
 }
@@ -126,9 +126,15 @@ export function answerMessages(answer: (shown: Shown) => string | undefined = ()
 /** Every editor closed, every unsaved buffer reverted first: no save prompt can hang a test. */
 export async function closeAll(): Promise<void> {
   for (const document of vscode.workspace.textDocuments) {
-    if (!document.isDirty || document.uri.scheme !== 'file') continue;
-    await vscode.window.showTextDocument(document);
-    await vscode.commands.executeCommand('workbench.action.files.revert');
+    if (!document.isDirty) continue;
+    if (document.uri.scheme === 'file') {
+      await vscode.window.showTextDocument(document);
+      await vscode.commands.executeCommand('workbench.action.files.revert');
+    } else if (document.uri.scheme === 'untitled') {
+      // a patch New S.I.R Patch started and nobody saved
+      await vscode.window.showTextDocument(document);
+      await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+    }
   }
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 }
@@ -145,15 +151,15 @@ export async function exists(uri: vscode.Uri): Promise<boolean> {
   }
 }
 
-/** Edits `code` (`return 1` → `return 2`), runs Generate Patch on it and waits for its `.hatch`. */
-export async function generated(code: vscode.Uri, patch = code.with({ path: `${code.path}.hatch` })): Promise<{
+/** Edits `code` (`return 1` → `return 2`), runs Generate Patch on it and waits for its `.sirp`. */
+export async function generated(code: vscode.Uri, patch = code.with({ path: `${code.path}.sirp` })): Promise<{
   readonly editor: vscode.TextEditor;
   readonly patch: vscode.Uri;
   readonly text: string;
 }> {
   const editor = await open(code);
   await setText(editor.document, edited(editor.document.getText()));
-  await vscode.commands.executeCommand('hatch.generate', code);
+  await vscode.commands.executeCommand('sir.generate', code);
   await waitFor(`${patch.fsPath} on disk`, () => exists(patch));
   // generate opens the patch beside last of all: until then it could still take the focus
   await waitFor(`${patch.fsPath} open`, () => vscode.window.visibleTextEditors.some((e) => e.document.uri.toString() === patch.toString()));
@@ -182,14 +188,14 @@ export async function waitForDiagnostic(uri: vscode.Uri, match: (d: vscode.Diagn
   }
 }
 
-export async function waitForStatus(hatch: HatchTestApi, match: RegExp): Promise<string> {
+export async function waitForStatus(sir: SirTestApi, match: RegExp): Promise<string> {
   try {
     return await waitFor(`status ${match}`, () => {
-      const text = hatch.status();
+      const text = sir.status();
       return text !== undefined && match.test(text) ? text : undefined;
     });
   } catch (e) {
-    throw new Error(`${String(e)}; the status bar said ${JSON.stringify(hatch.status())}; ${editors()}`);
+    throw new Error(`${String(e)}; the status bar said ${JSON.stringify(sir.status())}; ${editors()}`);
   }
 }
 

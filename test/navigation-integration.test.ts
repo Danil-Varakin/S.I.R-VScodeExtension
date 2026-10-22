@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
-import { HatchService, serviceEntry } from '../src/service/client.ts';
+import { SirService, serviceEntry } from '../src/service/client.ts';
 import type { Log } from '../src/ui/log.ts';
 import type { ResolveResultMessage } from '../src/service/protocol.ts';
 import {
@@ -33,7 +33,7 @@ const silent: Log = {
  * not against fixtures: a hand-written HunkLink can agree with the tests and still
  * disagree with the service.
  */
-async function tableFor(client: HatchService): Promise<{ md: string; hunks: ResolveResultMessage['hunks'] }> {
+async function tableFor(client: SirService): Promise<{ md: string; hunks: ResolveResultMessage['hunks'] }> {
   const generated = await client.request('generate', {
     baseText: BASE,
     newText: NEW,
@@ -48,7 +48,7 @@ async function tableFor(client: HatchService): Promise<{ md: string; hunks: Reso
 }
 
 test('a real resolve carries every coordinate navigation depends on', async () => {
-  const client = new HatchService(SERVICE, undefined, silent);
+  const client = new SirService(SERVICE, undefined, silent);
   try {
     const { hunks } = await tableFor(client);
     assert.ok(hunks.length >= 1, 'expected at least one hunk');
@@ -65,7 +65,7 @@ test('a real resolve carries every coordinate navigation depends on', async () =
 });
 
 test('the cursor on a real hunk heading finds that hunk', async () => {
-  const client = new HatchService(SERVICE, undefined, silent);
+  const client = new SirService(SERVICE, undefined, silent);
   try {
     const { hunks } = await tableFor(client);
     const hunk = hunks[0]!;
@@ -79,7 +79,7 @@ test('the cursor on a real hunk heading finds that hunk', async () => {
 });
 
 test('final coordinates land on the inserted line once the edges are trimmed', async () => {
-  const client = new HatchService(SERVICE, undefined, silent);
+  const client = new SirService(SERVICE, undefined, silent);
   try {
     const { hunks } = await tableFor(client);
     const hunk = hunks[0]!;
@@ -97,7 +97,7 @@ test('final coordinates land on the inserted line once the edges are trimmed', a
 });
 
 test('a position inside the real inserted text maps back to its hunk', async () => {
-  const client = new HatchService(SERVICE, undefined, silent);
+  const client = new SirService(SERVICE, undefined, silent);
   try {
     const { hunks } = await tableFor(client);
     const at = NEW.indexOf('two();') + 2;
@@ -110,7 +110,7 @@ test('a position inside the real inserted text maps back to its hunk', async () 
 });
 
 test('a drifted buffer is detected and the position is carried over by line', async () => {
-  const client = new HatchService(SERVICE, undefined, silent);
+  const client = new SirService(SERVICE, undefined, silent);
   try {
     const { md, hunks } = await tableFor(client);
     const hunk = hunks[0]!;
@@ -136,7 +136,7 @@ test('a CRLF file is patched with CRLF lines, so final is buffer coordinates as 
   const crlf = (text: string): string => text.replace(/\n/g, '\r\n');
   const base = crlf(BASE);
   const next = crlf(NEW);
-  const client = new HatchService(SERVICE, undefined, silent);
+  const client = new SirService(SERVICE, undefined, silent);
   try {
     const { patch } = await client.request('generate', { baseText: base, newText: next, path: PATH });
     const { hunks } = await client.request('resolve', { patch, baseText: base, path: PATH });

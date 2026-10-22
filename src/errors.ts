@@ -6,14 +6,14 @@ export function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-export class HatchServiceError extends Error {
+export class SirServiceError extends Error {
   readonly kind: string;
   readonly exitCode: number;
   readonly detail: Readonly<Record<string, unknown>> | undefined;
 
   constructor(error: ServiceError) {
     super(error.message);
-    this.name = 'HatchServiceError';
+    this.name = 'SirServiceError';
     this.kind = error.kind;
     this.exitCode = error.exitCode;
     this.detail = error.detail;
@@ -38,7 +38,7 @@ export class ServiceMissingError extends Error {
   readonly path: string;
 
   constructor(path: string) {
-    super(`hatch service entry not found: ${path}`);
+    super(`sir service entry not found: ${path}`);
     this.name = 'ServiceMissingError';
     this.path = path;
   }
@@ -82,11 +82,11 @@ export class ProtocolMismatchError extends Error {
   /** what the core serves */
   readonly served: ProtocolRange;
 
-  constructor(supported: ProtocolRange, served: ProtocolRange, hatchVersion: string) {
+  constructor(supported: ProtocolRange, served: ProtocolRange, sirVersion: string) {
     super(
       served.max < supported.min
-        ? `hatch ${hatchVersion} speaks protocol ${describeRange(served)}, this extension needs ${describeRange(supported)}; update hatch`
-        : `hatch ${hatchVersion} serves protocol ${describeRange(served)}, this extension knows ${describeRange(supported)}; update the extension`,
+        ? `sir ${sirVersion} speaks protocol ${describeRange(served)}, this extension needs ${describeRange(supported)}; update sir`
+        : `sir ${sirVersion} serves protocol ${describeRange(served)}, this extension knows ${describeRange(supported)}; update the extension`,
     );
     this.name = 'ProtocolMismatchError';
     this.supported = supported;
@@ -98,7 +98,7 @@ export class UnsupportedDocumentError extends Error {
   readonly scheme: string;
 
   constructor(scheme: string) {
-    super(`hatch works on files on disk, this document uses the '${scheme}' scheme`);
+    super(`sir works on files on disk, this document uses the '${scheme}' scheme`);
     this.name = 'UnsupportedDocumentError';
     this.scheme = scheme;
   }

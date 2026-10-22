@@ -46,7 +46,7 @@ const settle = (ms = 20): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
 test('commands asking at once for one patch share one build', async () => {
   const h = harness();
-  const asked = [h.store.get('a.hatch'), h.store.get('a.hatch'), h.store.view('a.hatch')];
+  const asked = [h.store.get('a.sirp'), h.store.get('a.sirp'), h.store.view('a.sirp')];
   await settle(0);
   assert.equal(h.builds.length, 1);
   h.builds[0]!.resolve({ v: 'v1' });
@@ -56,7 +56,7 @@ test('commands asking at once for one patch share one build', async () => {
 
 test('a burst of keystrokes is one rebuild, after the pause', async () => {
   const h = harness({ delayMs: 30, auto: (_, n) => ({ v: `v${n}`, deps: ['a.cc'] }) });
-  await h.store.get('a.hatch');
+  await h.store.get('a.sirp');
   for (let i = 0; i < 20; i += 1) {
     h.store.touch('a.cc');
     await settle(2);
@@ -68,36 +68,36 @@ test('a burst of keystrokes is one rebuild, after the pause', async () => {
 
 test('a view keeps the last table while the rebuild waits; a command gets the fresh one', async () => {
   const h = harness({ delayMs: 1_000, auto: (_, n) => ({ v: `v${n}`, deps: ['a.cc'] }) });
-  await h.store.get('a.hatch');
+  await h.store.get('a.sirp');
   h.store.touch('a.cc');
-  assert.equal((await h.store.view('a.hatch')).v, 'v1', 'views do not flicker');
-  assert.equal((await h.store.get('a.hatch')).v, 'v2', 'a command never acts on a stale table');
+  assert.equal((await h.store.view('a.sirp')).v, 'v1', 'views do not flicker');
+  assert.equal((await h.store.get('a.sirp')).v, 'v2', 'a command never acts on a stale table');
   h.store.dispose();
 });
 
 test('a transient failure gets its one retry back after a success', async () => {
   // n: 1 transient → 2 (its retry) ok → touched → 3 transient → 4 (its retry) ok
   const h = harness({ auto: (_, n) => (n % 2 === 1 ? { v: `down${n}`, failed: true, transient: true, deps: ['a.cc'] } : { v: `up${n}`, deps: ['a.cc'] }) });
-  await h.store.get('a.hatch');
+  await h.store.get('a.sirp');
   await settle(40);
   assert.equal(h.builds.length, 2);
   h.store.touch('a.cc');
   await settle(40);
   assert.equal(h.builds.length, 4, 'a second restart of the service is retried too');
-  assert.deepEqual(h.changes.at(-1), ['a.hatch', 'up4']);
+  assert.deepEqual(h.changes.at(-1), ['a.sirp', 'up4']);
   h.store.dispose();
 });
 
 test('a build that throws leaves nothing stuck: the next ask builds again', async () => {
   const h = harness({ auto: (_, n) => (n === 1 ? Promise.reject(new Error('boom')) : { v: 'ok' }) });
-  await assert.rejects(h.store.get('a.hatch'), /boom/);
-  assert.equal((await h.store.get('a.hatch')).v, 'ok');
+  await assert.rejects(h.store.get('a.sirp'), /boom/);
+  assert.equal((await h.store.get('a.sirp')).v, 'ok');
   h.store.dispose();
 });
 
 test('after dispose nothing is built and nobody is told anything', async () => {
   const h = harness({ delayMs: 10, auto: () => ({ v: 'v', deps: ['a.cc'] }) });
-  await h.store.get('a.hatch');
+  await h.store.get('a.sirp');
   const before = [h.builds.length, h.changes.length];
   h.store.touch('a.cc');
   h.store.dispose();
@@ -107,7 +107,7 @@ test('after dispose nothing is built and nobody is told anything', async () => {
 
 test('a build that finishes after dispose is not announced', async () => {
   const h = harness();
-  const pending = h.store.get('a.hatch');
+  const pending = h.store.get('a.sirp');
   await settle(0);
   h.store.dispose();
   h.builds[0]!.resolve({ v: 'late' });
@@ -117,17 +117,17 @@ test('a build that finishes after dispose is not announced', async () => {
 
 test('the disk is watched for what a table hangs on, and no longer once it is forgotten', async () => {
   const h = harness({ auto: () => ({ v: 'v', deps: ['a.cc'] }) });
-  await h.store.get('a.hatch');
+  await h.store.get('a.sirp');
   assert.ok(h.watched.at(-1)?.has('a.cc'));
-  h.store.forget('a.hatch');
+  h.store.forget('a.sirp');
   assert.equal(h.watched.at(-1)?.has('a.cc'), false);
-  assert.equal(h.watched.at(-1)?.has('a.hatch'), false);
+  assert.equal(h.watched.at(-1)?.has('a.sirp'), false);
   h.store.dispose();
 });
 
 test('touching what nothing depends on schedules nothing', async () => {
   const h = harness({ auto: () => ({ v: 'v' }) });
-  await h.store.get('a.hatch');
+  await h.store.get('a.sirp');
   h.store.touch('unrelated.cc');
   await settle(30);
   assert.equal(h.builds.length, 1);
@@ -140,21 +140,21 @@ const DEFAULTS: Record<string, unknown> = { 'base.eol': null, 'base.head': null,
 
 function section(values: Record<string, unknown>, level: 'workspaceValue' | 'workspaceFolderValue' | 'globalValue' = 'workspaceValue'): WorkspaceConfiguration {
   return {
-    inspect: (key: string) => ({ key: `hatch.${key}`, defaultValue: DEFAULTS[key], ...(key in values ? { [level]: values[key] } : {}) }),
+    inspect: (key: string) => ({ key: `sir.${key}`, defaultValue: DEFAULTS[key], ...(key in values ? { [level]: values[key] } : {}) }),
   } as unknown as WorkspaceConfiguration;
 }
 
-test('E1: hatch.base.eol set alone still overrides the config for this person', () => {
+test('E1: sir.base.eol set alone still overrides the config for this person', () => {
   // README: "A base out of git is read with the line endings of the file on disk unless
-  // generate.base.eol or hatch.base.eol says otherwise". Protocol 4 cannot send the endings
+  // generate.base.eol or sir.base.eol says otherwise". Protocol 4 cannot send the endings
   // alone, so they reach the core inside the baseGit every request is sent with.
   const eol = chosenEol(section({ 'base.eol': 'repository' }));
   assert.equal(eol, 'repository');
   const fromConfig = { kind: 'git', spec: 'main:src/a.cc', sha: '4f1c2e2aa0', eol: 'worktree' } as const;
   const config = {
-    file: '/r/hatch.config.json', schemaVersion: 2, repoRoot: '/r', watch: [], base: fromConfig,
+    file: '/r/sir.config.json', schemaVersion: 2, repoRoot: '/r', watch: [], base: fromConfig,
     settings: { baseHead: false, baseBranch: 'main', baseCommit: null, baseEol: 'worktree' },
-    origins: { 'generate.base.eol': 'config /r/hatch.config.json' },
+    origins: { 'generate.base.eol': 'config /r/sir.config.json' },
   } as unknown as ConfigResult;
   const base = effectiveBase(config, eol);
   assert.deepEqual(base.kind === 'git' ? base.git : undefined, { branch: 'main', eol: 'repository' }, 'the config base, the user\'s endings');

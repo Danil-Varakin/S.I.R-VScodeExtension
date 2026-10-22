@@ -27,8 +27,8 @@ test('a missing file of the package is named', () => {
 });
 
 test('the core without its service entry or its grammars is named', () => {
-  const noService = goodListing().filter((p) => p !== 'node_modules/hatch/dist/service/index.js');
-  assert.deepEqual(checkContents(noService), ['missing: node_modules/hatch/dist/service/index.js']);
+  const noService = goodListing().filter((p) => p !== 'node_modules/sir/dist/service/index.js');
+  assert.deepEqual(checkContents(noService), ['missing: node_modules/sir/dist/service/index.js']);
 
   const noGrammars = goodListing().filter((p) => !p.includes('/grammars/'));
   assert.equal(checkContents(noGrammars).length, 2);
@@ -38,7 +38,7 @@ test("the core's runtime closure is named by package, wherever npm put it", () =
   const hoisted = goodListing();
   const nested = hoisted.map((p) =>
     p.startsWith('node_modules/web-tree-sitter/')
-      ? p.replace('node_modules/', 'node_modules/hatch/node_modules/')
+      ? p.replace('node_modules/', 'node_modules/sir/node_modules/')
       : p,
   );
   assert.deepEqual(checkContents(nested), []);
@@ -56,13 +56,14 @@ test('what must stay out of the package is named with the files that leaked', ()
     ['src/extension.ts', 'the extension sources'],
     ['test/e2e/fixture.ts', 'the tests and their build'],
     ['docs/notes.md', 'the local docs'],
-    ['CLAUDE.md', 'the files of the assistants'],
+    ['NOTES.md', 'a file of this machine only'],
+    ['.local/settings.json', 'a file of this machine only'],
     ['CONTRIBUTING.ru.md', 'the files for contributors'],
     ['scripts/package.mjs', 'the repository plumbing'],
     ['tsconfig.json', 'the build configuration'],
     ['dist/extension.cjs.map', 'TypeScript sources and source maps'],
-    ['node_modules/hatch/src/index.ts', "the core's build tree and sources"],
-    ['hatch-vscode-0.0.1.vsix', 'a packaged extension'],
+    ['node_modules/sir/src/index.ts', "the core's build tree and sources"],
+    ['sir-vscode-0.0.1.vsix', 'a packaged extension'],
   ];
   for (const [path, what] of leaks) {
     const problems = checkContents([...goodListing(), path]) as string[];

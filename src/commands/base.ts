@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { HatchDeps } from '../deps.ts';
+import type { SirDeps } from '../deps.ts';
 import { activeFile } from '../active-file.ts';
 import { errorMessage } from '../errors.ts';
 import { describeBase, effectiveBase } from '../project/base.ts';
@@ -8,13 +8,13 @@ import { originKind } from '../service/protocol.ts';
 import { fileExists } from '../workspace-fs.ts';
 
 /** Where a generate from the active file would take its base, and why: into the log. */
-export async function showBase({ project, log }: Pick<HatchDeps, 'project' | 'log'>): Promise<void> {
+export async function showBase({ project, log }: Pick<SirDeps, 'project' | 'log'>): Promise<void> {
   const active = activeFile();
   if (active.kind !== 'ok') {
     void vscode.window.showErrorMessage(
       active.kind === 'none'
-        ? 'hatch: no file open'
-        : `hatch: this document uses the '${active.scheme}' scheme, not a file on disk`,
+        ? 'sir: no file open'
+        : `sir: this document uses the '${active.scheme}' scheme, not a file on disk`,
     );
     return;
   }
@@ -26,7 +26,7 @@ export async function showBase({ project, log }: Pick<HatchDeps, 'project' | 'lo
     log.info(
       `base for ${uri.fsPath}: ${describeBase(base)} — config ${config.file ?? 'none'}, ` +
         `generate.base.* from ${originsOfBase(config.origins)}` +
-        (eol !== undefined && base.kind === 'git' ? `; eol: ${eol} from hatch.base.eol` : ''),
+        (eol !== undefined && base.kind === 'git' ? `; eol: ${eol} from sir.base.eol` : ''),
     );
     if (base.kind === 'saved' && !(await fileExists(uri))) log.info(`  ${uri.fsPath} is not saved on disk`);
   } catch (e) {

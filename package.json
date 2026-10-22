@@ -1,7 +1,7 @@
 {
-  "name": "hatch-vscode",
-  "displayName": "Hatch Patches",
-  "description": "Write and maintain structure-aware patches over upstream code: generate a .hatch patch from your edits, see where every hunk lands, and move between the patch and the code",
+  "name": "sir-vscode",
+  "displayName": "S.I.R Patches",
+  "description": "Write and maintain structure-aware patches over upstream code: generate a .sirp patch from your edits, see where every hunk lands, and move between the patch and the code",
   "version": "0.0.1",
   "publisher": "danil-varakin",
   "license": "MIT",
@@ -9,13 +9,13 @@
     "color": "#2f6b4f",
     "theme": "dark"
   },
-  "homepage": "https://github.com/Danil-Varakin/HatchVSCodeExtension-#readme",
+  "homepage": "https://github.com/Danil-Varakin/S.I.R-VScodeExtension#readme",
   "bugs": {
-    "url": "https://github.com/Danil-Varakin/HatchVSCodeExtension-/issues"
+    "url": "https://github.com/Danil-Varakin/S.I.R-VScodeExtension/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Danil-Varakin/HatchVSCodeExtension-.git"
+    "url": "https://github.com/Danil-Varakin/S.I.R-VScodeExtension.git"
   },
   "type": "module",
   "engines": {
@@ -33,12 +33,12 @@
     "rebase",
     "tree-sitter",
     "chromium",
-    "hatch"
+    "sir"
   ],
   "main": "./dist/extension.cjs",
   "activationEvents": [
-    "workspaceContains:**/hatch.config.json",
-    "onLanguage:hatch"
+    "workspaceContains:**/sir.config.json",
+    "onLanguage:sir"
   ],
   "extensionKind": [
     "workspace"
@@ -46,210 +46,296 @@
   "capabilities": {
     "virtualWorkspaces": {
       "supported": false,
-      "description": "Hatch spawns its core as a child process and measures patch paths from the .git directory, so it needs the files on a real file system."
+      "description": "S.I.R spawns its core as a child process and measures patch paths from the .git directory, so it needs the files on a real file system."
     },
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Patches are generated and read. Until the workspace is trusted, a patch its hatch.config.json sends outside the workspace is written only after you confirm, the hatch.out setting of the workspace is ignored, and no hatch.config.json is created.",
+      "description": "Patches are generated and read. Until the workspace is trusted, a patch its sir.config.json sends outside the workspace is written only after you confirm, the sir.out setting of the workspace is ignored, and no sir.config.json is created.",
       "restrictedConfigurations": [
-        "hatch.out"
+        "sir.out"
       ]
     }
   },
   "contributes": {
     "commands": [
       {
-        "command": "hatch.generate",
+        "command": "sir.generate",
         "title": "Generate Patch",
-        "category": "Hatch",
+        "category": "S.I.R",
         "icon": "$(diff-added)"
       },
       {
-        "command": "hatch.generateAgainstFile",
+        "command": "sir.generateAgainstFile",
         "title": "Generate Patch Against File…",
-        "category": "Hatch"
+        "category": "S.I.R"
       },
       {
-        "command": "hatch.showBase",
+        "command": "sir.newPatch",
+        "title": "New S.I.R Patch",
+        "category": "S.I.R"
+      },
+      {
+        "command": "sir.continueGenerate",
+        "title": "Continue Generate",
+        "category": "S.I.R",
+        "icon": "$(debug-continue)"
+      },
+      {
+        "command": "sir.showBase",
         "title": "Show Base",
-        "category": "Hatch"
+        "category": "S.I.R"
       },
       {
-        "command": "hatch.toggle",
+        "command": "sir.toggle",
         "title": "Go to the Other Side",
-        "category": "Hatch",
+        "category": "S.I.R",
         "icon": "$(arrow-swap)"
       },
       {
-        "command": "hatch.goToBaseline",
+        "command": "sir.goToBaseline",
         "title": "Go to What the Hunk Replaces",
-        "category": "Hatch"
+        "category": "S.I.R"
       },
       {
-        "command": "hatch.initConfig",
+        "command": "sir.initConfig",
         "title": "Init Config",
-        "category": "Hatch"
+        "category": "S.I.R"
       },
       {
-        "command": "hatch.showLog",
+        "command": "sir.showLog",
         "title": "Show Log",
-        "category": "Hatch"
+        "category": "S.I.R"
       },
       {
-        "command": "hatch.previewPatch",
+        "command": "sir.apply",
+        "title": "Apply Patch",
+        "category": "S.I.R",
+        "icon": "$(play)"
+      },
+      {
+        "command": "sir.applyAll",
+        "title": "Apply All Patches",
+        "category": "S.I.R",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "sir.previewPatch",
         "title": "Preview Patch",
-        "category": "Hatch"
+        "category": "S.I.R"
       },
       {
-        "command": "hatch.showEditsNotInPatch",
+        "command": "sir.showEditsNotInPatch",
         "title": "Show Edits Not in Patch",
-        "category": "Hatch"
+        "category": "S.I.R"
       },
       {
-        "command": "hatch.checkAll",
+        "command": "sir.checkAll",
         "title": "Check All Patches",
-        "category": "Hatch",
+        "category": "S.I.R",
         "icon": "$(checklist)"
       },
       {
-        "command": "hatch.copyReport",
+        "command": "sir.copyReport",
         "title": "Copy Patch Report",
-        "category": "Hatch",
+        "category": "S.I.R",
         "icon": "$(copy)"
       },
       {
-        "command": "hatch.openFailed",
+        "command": "sir.openFailed",
         "title": "Open Failed Patches",
-        "category": "Hatch",
+        "category": "S.I.R",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "hatch.repair",
+        "command": "sir.repair",
         "title": "Repair Hunk",
-        "category": "Hatch"
+        "category": "S.I.R"
       }
     ],
     "keybindings": [
       {
-        "command": "hatch.generate",
+        "command": "sir.generate",
         "key": "alt+g",
         "mac": "cmd+alt+g",
         "when": "editorTextFocus && resourceScheme == file"
       },
       {
-        "command": "hatch.toggle",
+        "command": "sir.toggle",
         "key": "alt+o",
         "mac": "cmd+alt+o",
-        "when": "editorTextFocus && (resourceScheme == file || resourceScheme == hatch-baseline)"
+        "when": "editorTextFocus && (resourceScheme == file || resourceScheme == sir-baseline)"
       },
       {
-        "command": "hatch.goToBaseline",
+        "command": "sir.goToBaseline",
         "key": "alt+b",
         "mac": "cmd+alt+b",
-        "when": "editorTextFocus && (resourceScheme == file || resourceScheme == hatch-baseline)"
+        "when": "editorTextFocus && (resourceScheme == file || resourceScheme == sir-baseline)"
+      },
+      {
+        "command": "sir.apply",
+        "key": "alt+a",
+        "mac": "cmd+alt+a",
+        "when": "editorTextFocus && resourceScheme == file"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "hatch.generate",
+          "command": "sir.generate",
           "when": "resourceScheme == file"
         },
         {
-          "command": "hatch.generateAgainstFile",
+          "command": "sir.generateAgainstFile",
           "when": "resourceScheme == file"
         },
         {
-          "command": "hatch.showBase",
+          "command": "sir.newPatch",
+          "when": "resourceScheme == file && editorLangId != sir"
+        },
+        {
+          "command": "sir.continueGenerate",
+          "when": "resourceScheme == untitled && editorLangId == sir"
+        },
+        {
+          "command": "sir.showBase",
           "when": "resourceScheme == file"
         },
         {
-          "command": "hatch.toggle",
-          "when": "resourceScheme == file || resourceScheme == hatch-baseline"
+          "command": "sir.toggle",
+          "when": "resourceScheme == file || resourceScheme == sir-baseline"
         },
         {
-          "command": "hatch.goToBaseline",
-          "when": "resourceScheme == file || resourceScheme == hatch-baseline"
+          "command": "sir.goToBaseline",
+          "when": "resourceScheme == file || resourceScheme == sir-baseline"
         },
         {
-          "command": "hatch.initConfig",
+          "command": "sir.initConfig",
           "when": "isWorkspaceTrusted"
         },
         {
-          "command": "hatch.previewPatch",
+          "command": "sir.apply",
           "when": "resourceScheme == file"
         },
         {
-          "command": "hatch.showEditsNotInPatch",
-          "when": "resourceScheme == file && editorLangId != hatch"
+          "command": "sir.applyAll",
+          "when": "sir.active"
         },
         {
-          "command": "hatch.checkAll",
-          "when": "hatch.active"
+          "command": "sir.previewPatch",
+          "when": "resourceScheme == file"
         },
         {
-          "command": "hatch.copyReport",
-          "when": "hatch.active"
+          "command": "sir.showEditsNotInPatch",
+          "when": "resourceScheme == file && editorLangId != sir"
         },
         {
-          "command": "hatch.openFailed",
-          "when": "hatch.active"
+          "command": "sir.checkAll",
+          "when": "sir.active"
         },
         {
-          "command": "hatch.repair",
+          "command": "sir.copyReport",
+          "when": "sir.active"
+        },
+        {
+          "command": "sir.openFailed",
+          "when": "sir.active"
+        },
+        {
+          "command": "sir.repair",
           "when": "false"
         }
       ],
       "editor/title": [
         {
-          "command": "hatch.generate",
-          "when": "resourceScheme == file && editorLangId != hatch && resourceExtname in hatch.extensions",
+          "command": "sir.generate",
+          "when": "resourceScheme == file && editorLangId != sir && resourceExtname in sir.extensions",
           "group": "navigation@100"
+        },
+        {
+          "command": "sir.apply",
+          "when": "resourceScheme == file && editorLangId == sir",
+          "group": "navigation@100"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "sir.generate",
+          "when": "resourceScheme == file && resourceExtname in sir.extensions",
+          "group": "1_sir@1"
+        },
+        {
+          "command": "sir.newPatch",
+          "when": "resourceScheme == file && resourceExtname in sir.extensions",
+          "group": "1_sir@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "sir.generate",
+          "when": "!explorerResourceIsFolder && resourceExtname in sir.extensions",
+          "group": "navigation@9"
+        },
+        {
+          "command": "sir.newPatch",
+          "when": "!explorerResourceIsFolder && resourceExtname in sir.extensions",
+          "group": "navigation@10"
         }
       ],
       "view/title": [
         {
-          "command": "hatch.checkAll",
-          "when": "view == hatch.patches",
+          "command": "sir.checkAll",
+          "when": "view == sir.patches",
           "group": "navigation@1"
         },
         {
-          "command": "hatch.openFailed",
-          "when": "view == hatch.patches",
+          "command": "sir.applyAll",
+          "when": "view == sir.patches",
           "group": "navigation@2"
         },
         {
-          "command": "hatch.copyReport",
-          "when": "view == hatch.patches",
+          "command": "sir.openFailed",
+          "when": "view == sir.patches",
           "group": "navigation@3"
+        },
+        {
+          "command": "sir.copyReport",
+          "when": "view == sir.patches",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "sir.apply",
+          "when": "view == sir.patches",
+          "group": "inline@1"
         }
       ]
     },
     "configuration": {
-      "title": "Hatch",
+      "title": "S.I.R",
       "properties": {
-        "hatch.out": {
+        "sir.out": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "markdownDescription": "Where patches go. A directory (or a path ending with a slash) receives `<file name>.hatch`; a file must be named `*.hatch`. With `upstream` set in `hatch.config.json` it is the root of the patch tree. Config key: `generate.out`. Leave unset to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Where patches go. A directory (or a path ending with a slash) receives `<file name>.sirp`; a file must be named `*.sirp`. With `upstream` set in `sir.config.json` it is the root of the patch tree. Config key: `generate.out`. Leave unset to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.language": {
+        "sir.language": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "markdownDescription": "Force a language instead of deriving it from the file extension. Config key: `generate.language`. Leave unset to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Force a language instead of deriving it from the file extension. Config key: `generate.language`. Leave unset to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.exact": {
+        "sir.exact": {
           "type": [
             "boolean",
             "null"
           ],
           "default": null,
           "scope": "resource",
-          "markdownDescription": "Reproduce the file byte for byte instead of matching every line after normalization. Config key: `generate.exact`. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Reproduce the file byte for byte instead of matching every line after normalization. Config key: `generate.exact`. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.bridgeGap": {
+        "sir.bridgeGap": {
           "type": [
             "integer",
             "null"
@@ -257,9 +343,9 @@
           "default": null,
           "minimum": 0,
           "scope": "resource",
-          "markdownDescription": "Stitch edits separated by up to this many unchanged non-blank lines into a single hunk. Config key: `generate.bridgeGap`. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Stitch edits separated by up to this many unchanged non-blank lines into a single hunk. Config key: `generate.bridgeGap`. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.parents.min": {
+        "sir.parents.min": {
           "type": [
             "integer",
             "null"
@@ -267,9 +353,9 @@
           "default": null,
           "minimum": 0,
           "scope": "resource",
-          "markdownDescription": "Enclosing blocks every pattern carries. A hunk with no parent is not structural: drifting neighbours can land it in another function. Config key: `generate.parents.min`. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Enclosing blocks every pattern carries. A hunk with no parent is not structural: drifting neighbours can land it in another function. Config key: `generate.parents.min`. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.parents.max": {
+        "sir.parents.max": {
           "anyOf": [
             {
               "type": "integer",
@@ -287,9 +373,9 @@
           ],
           "default": null,
           "scope": "resource",
-          "markdownDescription": "Cap on climbing up: at most this many enclosing blocks per pattern, or `\"all\"`. Config key: `generate.parents.max`. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Cap on climbing up: at most this many enclosing blocks per pattern, or `\"all\"`. Config key: `generate.parents.max`. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.parents.detail.base": {
+        "sir.parents.detail.base": {
           "type": [
             "integer",
             "null"
@@ -297,18 +383,18 @@
           "default": null,
           "minimum": 0,
           "scope": "resource",
-          "markdownDescription": "Bracket levels spelled out in parent headers, counting from the outermost: `0` gives `foo( ... )`, `1` gives `foo(bar( ... ))`. Readability against drift-tolerance, never correctness. Config key: `generate.parents.detail.base`. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Bracket levels spelled out in parent headers, counting from the outermost: `0` gives `foo( ... )`, `1` gives `foo(bar( ... ))`. Readability against drift-tolerance, never correctness. Config key: `generate.parents.detail.base`. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.parents.required": {
+        "sir.parents.required": {
           "type": [
             "boolean",
             "null"
           ],
           "default": null,
           "scope": "resource",
-          "markdownDescription": "Never fall back to a parentless pattern: fail instead of emitting an anchor that drift can move. Config key: `generate.parents.required`. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Never fall back to a parentless pattern: fail instead of emitting an anchor that drift can move. Config key: `generate.parents.required`. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.siblings.min": {
+        "sir.siblings.min": {
           "type": [
             "integer",
             "null"
@@ -316,9 +402,9 @@
           "default": null,
           "minimum": 0,
           "scope": "resource",
-          "markdownDescription": "Neighbouring significant lines every pattern carries, per side. Config key: `generate.siblings.min`. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Neighbouring significant lines every pattern carries, per side. Config key: `generate.siblings.min`. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.siblings.max": {
+        "sir.siblings.max": {
           "type": [
             "integer",
             "null"
@@ -326,9 +412,9 @@
           "default": null,
           "minimum": 0,
           "scope": "resource",
-          "markdownDescription": "Cap of neighbouring significant lines per side. `0` forbids leaning on neighbours at all, keeping anchoring purely structural. Config key: `generate.siblings.max`. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Cap of neighbouring significant lines per side. `0` forbids leaning on neighbours at all, keeping anchoring purely structural. Config key: `generate.siblings.max`. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.siblings.detail.base": {
+        "sir.siblings.detail.base": {
           "type": [
             "integer",
             "null"
@@ -336,30 +422,30 @@
           "default": null,
           "minimum": 0,
           "scope": "resource",
-          "markdownDescription": "Same bracket baseline for neighbour anchors. Config key: `generate.siblings.detail.base`. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Same bracket baseline for neighbour anchors. Config key: `generate.siblings.detail.base`. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.base.head": {
+        "sir.base.head": {
           "type": [
             "boolean",
             "null"
           ],
           "default": null,
           "scope": "resource",
-          "markdownDescription": "Compare the buffer with this file as of the last commit of the current branch, instead of with the file as saved on disk. `false` compares with the saved file even when the project config names a git base. With `hatch.base.branch` or `hatch.base.commit` set it is implied. Config key: `generate.base.head` (config schema 2). The three `hatch.base.*` settings name the base whole: any of them set replaces the config's `generate.base` entirely. Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Compare the buffer with this file as of the last commit of the current branch, instead of with the file as saved on disk. `false` compares with the saved file even when the project config names a git base. With `sir.base.branch` or `sir.base.commit` set it is implied. Config key: `generate.base.head` (config schema 2). The three `sir.base.*` settings name the base whole: any of them set replaces the config's `generate.base` entirely. Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.base.branch": {
+        "sir.base.branch": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "markdownDescription": "Compare with the file as of the last commit of this branch, local or remote-tracking (`main`, `origin/main`). Config key: `generate.base.branch` (config schema 2). Leave unset to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Compare with the file as of the last commit of this branch, local or remote-tracking (`main`, `origin/main`). Config key: `generate.base.branch` (config schema 2). Leave unset to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.base.commit": {
+        "sir.base.commit": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "markdownDescription": "Compare with the file as of this commit. Beside `hatch.base.branch` it must be a commit that branch holds. Config key: `generate.base.commit` (config schema 2). Leave unset to let `hatch.config.json` decide; setting it here overrides the project config for you only."
+          "markdownDescription": "Compare with the file as of this commit. Beside `sir.base.branch` it must be a commit that branch holds. Config key: `generate.base.commit` (config schema 2). Leave unset to let `sir.config.json` decide; setting it here overrides the project config for you only."
         },
-        "hatch.base.eol": {
+        "sir.base.eol": {
           "type": [
             "string",
             "null"
@@ -371,28 +457,28 @@
           ],
           "default": null,
           "scope": "resource",
-          "markdownDescription": "Line endings of a base read out of git: `repository` — as git stores the file; `worktree` — as the file on disk has them, for repositories with `core.autocrlf`. Applies with a git base named by `hatch.base.head`, `hatch.base.branch` or `hatch.base.commit`. Config key: `generate.base.eol` (config schema 2). Leave unset (`null`) to let `hatch.config.json` decide; setting it here overrides the project config for you only. When neither sets it, the editor reads with `worktree` — the buffer is compared as it is on disk — while the CLI keeps `repository`."
+          "markdownDescription": "Line endings of a base read out of git: `repository` — as git stores the file; `worktree` — as the file on disk has them, for repositories with `core.autocrlf`. Applies with a git base named by `sir.base.head`, `sir.base.branch` or `sir.base.commit`. Config key: `generate.base.eol` (config schema 2). Leave unset (`null`) to let `sir.config.json` decide; setting it here overrides the project config for you only. When neither sets it, the editor reads with `worktree` — the buffer is compared as it is on disk — while the CLI keeps `repository`."
         }
       }
     },
     "languages": [
       {
-        "id": "hatch",
+        "id": "sir",
         "aliases": [
-          "Hatch Patch",
-          "hatch"
+          "S.I.R Patch",
+          "sir"
         ],
         "extensions": [
-          ".hatch"
+          ".sirp"
         ],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "hatch",
-        "scopeName": "text.hatch",
-        "path": "./syntaxes/hatch.tmLanguage.json",
+        "language": "sir",
+        "scopeName": "text.sirp",
+        "path": "./syntaxes/sir.tmLanguage.json",
         "embeddedLanguages": {
           "meta.embedded.block.cpp": "cpp",
           "meta.embedded.block.c": "c",
@@ -404,18 +490,30 @@
           "meta.embedded.block.rust": "rust",
           "meta.embedded.block.java": "java",
           "meta.embedded.block.go": "go",
-          "meta.embedded.block.kotlin": "kotlin"
+          "meta.embedded.block.kotlin": "kotlin",
+          "meta.embedded.block.html": "html",
+          "meta.embedded.block.xml": "xml",
+          "meta.embedded.block.css": "css",
+          "meta.embedded.block.json": "json",
+          "meta.embedded.block.yaml": "yaml",
+          "meta.embedded.block.shellscript": "shellscript",
+          "meta.embedded.block.json5": "json5",
+          "meta.embedded.block.toml": "toml",
+          "meta.embedded.block.proto3": "proto3",
+          "meta.embedded.block.webidl": "webidl",
+          "meta.embedded.block.mojom": "mojom",
+          "meta.embedded.block.plaintext": "plaintext"
         }
       }
     ],
     "snippets": [
       {
-        "language": "hatch",
-        "path": "./snippets/hatch.json"
+        "language": "sir",
+        "path": "./snippets/sir.json"
       }
     ],
     "configurationDefaults": {
-      "[hatch]": {
+      "[sir]": {
         "files.trimTrailingWhitespace": false,
         "files.insertFinalNewline": false,
         "editor.formatOnSave": false,
@@ -428,21 +526,81 @@
     "views": {
       "explorer": [
         {
-          "id": "hatch.patches",
-          "name": "Hatch Patches",
-          "when": "hatch.active"
+          "id": "sir.patches",
+          "name": "S.I.R Patches",
+          "when": "sir.active"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "hatch.patches",
-        "contents": "Check every patch of the workspace against the project base, or against a branch, tag or commit — before moving to a new upstream.\n[Check All Patches](command:hatch.checkAll)"
+        "view": "sir.patches",
+        "contents": "Check every patch of the workspace against the project base: what does not apply is listed here, in Problems and in red in the Explorer.\n[Check All Patches](command:sir.checkAll)"
       }
     ],
     "colors": [
       {
-        "id": "hatch.driftedHunkBackground",
+        "id": "sir.appliedPatchForeground",
+        "description": "The label after a patch's header, and the patch's name in the Explorer, when the patch is in its code.",
+        "defaults": {
+          "dark": "#89d185",
+          "light": "#388a34",
+          "highContrast": "#89d185",
+          "highContrastLight": "#388a34"
+        }
+      },
+      {
+        "id": "sir.appliedPatchBackground",
+        "description": "Background of the label after a patch's header when the patch is in its code.",
+        "defaults": {
+          "dark": "#89d18526",
+          "light": "#388a341f",
+          "highContrast": null,
+          "highContrastLight": null
+        }
+      },
+      {
+        "id": "sir.notAppliedPatchForeground",
+        "description": "The label after a patch's header, and the patch's name in the Explorer, when the code is still its base.",
+        "defaults": {
+          "dark": "#3794ff",
+          "light": "#1a85ff",
+          "highContrast": "#3794ff",
+          "highContrastLight": "#0f4a85"
+        }
+      },
+      {
+        "id": "sir.notAppliedPatchBackground",
+        "description": "Background of the label after a patch's header when the code is still its base.",
+        "defaults": {
+          "dark": "#3794ff26",
+          "light": "#1a85ff1f",
+          "highContrast": null,
+          "highContrastLight": null
+        }
+      },
+      {
+        "id": "sir.changedPatchForeground",
+        "description": "The label after a patch's header, and the patch's name in the Explorer, when the code changed since the patch.",
+        "defaults": {
+          "dark": "sir.driftedHunkForeground",
+          "light": "sir.driftedHunkForeground",
+          "highContrast": "sir.driftedHunkForeground",
+          "highContrastLight": "sir.driftedHunkForeground"
+        }
+      },
+      {
+        "id": "sir.changedPatchBackground",
+        "description": "Background of the label after a patch's header when the code changed since the patch.",
+        "defaults": {
+          "dark": "sir.driftedHunkBackground",
+          "light": "sir.driftedHunkBackground",
+          "highContrast": null,
+          "highContrastLight": null
+        }
+      },
+      {
+        "id": "sir.driftedHunkBackground",
         "description": "Background of a hunk whose text the code no longer holds.",
         "defaults": {
           "dark": "#cca70033",
@@ -452,7 +610,27 @@
         }
       },
       {
-        "id": "hatch.brokenHunkBackground",
+        "id": "sir.selectedHunkForeground",
+        "description": "The frame, the scrollbar mark and the label of the hunk Go to What the Hunk Replaces marks in the diff «base ↔ base + patch».",
+        "defaults": {
+          "dark": "focusBorder",
+          "light": "focusBorder",
+          "highContrast": "contrastActiveBorder",
+          "highContrastLight": "contrastActiveBorder"
+        }
+      },
+      {
+        "id": "sir.selectedHunkBackground",
+        "description": "Background of the hunk Go to What the Hunk Replaces marks in the diff «base ↔ base + patch».",
+        "defaults": {
+          "dark": "#3794ff2e",
+          "light": "#1a85ff24",
+          "highContrast": null,
+          "highContrastLight": null
+        }
+      },
+      {
+        "id": "sir.brokenHunkBackground",
         "description": "Background of a hunk that lands nowhere in the base.",
         "defaults": {
           "dark": "#f4877133",
@@ -462,7 +640,7 @@
         }
       },
       {
-        "id": "hatch.driftedHunkForeground",
+        "id": "sir.driftedHunkForeground",
         "description": "Mark after the header of a drifted hunk.",
         "defaults": {
           "dark": "#cca700",
@@ -472,7 +650,7 @@
         }
       },
       {
-        "id": "hatch.brokenHunkForeground",
+        "id": "sir.brokenHunkForeground",
         "description": "Mark after the header of a broken hunk.",
         "defaults": {
           "dark": "#f48771",
@@ -493,19 +671,27 @@
     "grammar": "node scripts/build-grammar.mjs",
     "package": "node scripts/package.mjs",
     "test:e2e": "npm run build && node scripts/build-e2e.mjs && vscode-test",
-    "test:packaged": "node scripts/build-e2e.mjs && node scripts/test-packaged.mjs"
+    "test:packaged": "node scripts/build-e2e.mjs && node scripts/test-packaged.mjs",
+    "test:perf": "node scripts/test-perf.mjs",
+    "test:mutation": "stryker run",
+    "coverage": "node scripts/coverage.mjs"
   },
   "dependencies": {
-    "hatch": "https://github.com/Danil-Varakin/hatchTs/releases/download/v0.4.1/hatch-0.4.1.tgz"
+    "sir": "https://github.com/Danil-Varakin/S.I.R/releases/download/v0.5.0/sir-0.5.0.tgz"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^10.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.0.0",
     "@types/vscode": "~1.101.0",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^4.0.0",
+    "c8": "^11.0.0",
     "esbuild": "^0.25.0",
+    "istanbul-lib-coverage": "^3.2.2",
+    "istanbul-lib-report": "^3.0.1",
+    "istanbul-reports": "^3.2.0",
     "mocha": "^12.0.3",
     "typescript": "^5.7.0"
   }

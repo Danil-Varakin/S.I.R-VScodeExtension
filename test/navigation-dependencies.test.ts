@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { DependencyTable } from '../src/navigation/dependencies.ts';
 
-const MD = 'file:///w/patches/a.cc.hatch';
+const MD = 'file:///w/patches/a.cc.sirp';
 const CODE = 'file:///w/a.cc';
 const OTHER = 'file:///w/b.cc';
 
@@ -71,4 +71,12 @@ test('watched is every document the tracked keys hang on, keys included, once ea
   table.forget(MD);
   assert.equal(table.has(MD), false);
   assert.deepEqual([...table.watched()].sort(), [CODE, OTHER].sort());
+});
+
+// ---- what mutation testing found unchecked (docs/15-test-plan.md, stage 4c) ----
+
+test('a key tracked without dependencies depends on itself alone', () => {
+  const table = new DependencyTable();
+  table.track(MD);
+  assert.deepEqual([...table.watched()], [MD]);
 });

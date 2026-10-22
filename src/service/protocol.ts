@@ -28,7 +28,7 @@ export type {
   ServiceError,
   Span,
   VersionResult,
-} from 'hatch/protocol';
+} from 'sir/protocol';
 
 import type {
   ApplyParams,
@@ -48,19 +48,43 @@ import type {
   ResolveResultMessage,
   ResponseMessage,
   VersionResult,
-} from 'hatch/protocol';
+} from 'sir/protocol';
 
 export interface ProtocolRange {
   readonly min: number;
   readonly max: number;
 }
 
-/** The protocol range this extension works with — hatch VERSIONING.md, R8. `max` is the
+/** The protocol range this extension works with — sir VERSIONING.md, R8. `max` is the
  *  newest protocol it was written and tested against; `min` the oldest core it still
  *  works with. Compatible with a core iff the two ranges overlap; NEVER compare for
  *  equality (R9). Raise `max` after testing against that core; raise `min` only when the
  *  extension starts to rely on something that older cores do not have. */
-export const SUPPORTED_PROTOCOL: ProtocolRange = { min: 4, max: 4 };
+export const SUPPORTED_PROTOCOL: ProtocolRange = { min: 5, max: 5 };
+
+/**
+ * `config` with the fields of protocol 5 typed optional: `language` (N3) and `header`
+ * (N5). Written while the core inside (hatch 0.4.1, protocol 4) had no types for them;
+ * sir 0.5.0 has them, so this is the one exception to "re-exported, never copied"
+ * (CONTRIBUTING.md) left to remove.
+ * `Omit` keeps it one type against the typings of both cores — the shipped one, and a
+ * newer one where the two fields are required.
+ */
+export type ConfigResultV5 = Omit<ConfigResult, 'language' | 'header'> & {
+  /** the word `generate` writes in `# match` for this file; null when none is picked */
+  readonly language?: string | null;
+  /** the header `generate` would write for this file now, its blank line after it */
+  readonly header?: string | null;
+};
+
+/**
+ * `generate` with `keep` (protocol 5, N4): a draft finished by hand, its hunks taken as
+ * settled and synthesis going on from them. The same exception as `ConfigResultV5`.
+ */
+export type GenerateParamsV5 = Omit<GenerateParams, 'keep'> & {
+  /** the `.sirp` a `SynthesisError` handed over as `draft`, finished by hand */
+  readonly keep?: string;
+};
 
 /**
  * Every method, with what it takes and what it answers. `request` is typed by it, so a
@@ -68,11 +92,11 @@ export const SUPPORTED_PROTOCOL: ProtocolRange = { min: 4, max: 4 };
  */
 export interface Methods {
   readonly version: { readonly params: undefined; readonly result: VersionResult };
-  readonly generate: { readonly params: GenerateParams; readonly result: GenerateResult };
+  readonly generate: { readonly params: GenerateParamsV5; readonly result: GenerateResult };
   readonly resolve: { readonly params: ResolveParams; readonly result: ResolveResultMessage };
   readonly apply: { readonly params: ApplyParams; readonly result: ApplyResultMessage };
   readonly configTemplate: { readonly params: ConfigTemplateParams; readonly result: ConfigTemplateResult };
-  readonly config: { readonly params: ConfigParams; readonly result: ConfigResult };
+  readonly config: { readonly params: ConfigParams; readonly result: ConfigResultV5 };
   readonly pair: { readonly params: PairParams; readonly result: PairResult };
   readonly cancel: { readonly params: CancelParams; readonly result: CancelResult };
 }

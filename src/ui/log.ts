@@ -17,7 +17,7 @@ export interface Log {
 }
 
 export function createLog(): Log {
-  const channel = vscode.window.createOutputChannel('Hatch', { log: true });
+  const channel = vscode.window.createOutputChannel('S.I.R', { log: true });
 
   return {
     info: (message) => channel.info(message),

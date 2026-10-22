@@ -8,9 +8,9 @@ import { COMMANDS } from '../commands/ids.ts';
 import { PATCH_LANGUAGE } from '../patch-files.ts';
 import { DIAGNOSTIC_SOURCE } from './diagnostics.ts';
 
-// The light bulb of a `.hatch` (R3, B8): on a broken or drifted hunk, the actions the
+// The light bulb of a `.sirp` (R3, B8): on a broken or drifted hunk, the actions the
 // notifications offer, without a trip through them. The actions are worked out in
-// feedback/repairs.ts; each runs `hatch.repair` with the hunk it is about.
+// feedback/repairs.ts; each runs `sir.repair` with the hunk it is about.
 
 export function createRepairActions(cache: PatchIndexCache): vscode.Disposable {
   const provider: vscode.CodeActionProvider = {

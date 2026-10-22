@@ -36,16 +36,9 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# local assistant files: instructions, settings, caches — kept on this machine only
-CLAUDE.md
-CLAUDE.local.md
-.claude/
-.mcp.json
-AGENTS.md
-GEMINI.md
-.cursor/
-.cursorrules
-.windsurfrules
-.aider*
-.continue/
-.github/copilot-instructions.md
+# coverage of the unit and end-to-end suites (npm run coverage)
+coverage/
+
+# mutation testing (npm run test:mutation)
+.stryker-tmp/
+reports/

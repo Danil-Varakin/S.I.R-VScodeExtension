@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { WorkspaceConfiguration } from 'vscode';
 
-import { baseFrom, overridesFrom } from '../src/settings.ts';
+import { baseFrom, explicit, overridesFrom } from '../src/settings.ts';
 
 const DEFAULTS: Record<string, unknown> = {
   language: '',
@@ -20,7 +20,7 @@ const DEFAULTS: Record<string, unknown> = {
 function section(values: Record<string, unknown>): WorkspaceConfiguration {
   return {
     inspect: (key: string) => ({
-      key: `hatch.${key}`,
+      key: `sir.${key}`,
       defaultValue: DEFAULTS[key],
       ...(key in values ? { workspaceValue: values[key] } : {}),
     }),
@@ -98,10 +98,10 @@ test('the narrowest level wins, as the editor reads it: folder over workspace ov
   const levels = {
     inspect: (key: string) =>
       key === 'bridgeGap'
-        ? { key: 'hatch.bridgeGap', globalValue: 1, workspaceValue: 2, workspaceFolderValue: 3 }
+        ? { key: 'sir.bridgeGap', globalValue: 1, workspaceValue: 2, workspaceFolderValue: 3 }
         : key === 'exact'
-          ? { key: 'hatch.exact', globalValue: true, workspaceValue: null }
-          : { key: `hatch.${key}` },
+          ? { key: 'sir.exact', globalValue: true, workspaceValue: null }
+          : { key: `sir.${key}` },
   } as unknown as WorkspaceConfiguration;
   const overrides = overridesFrom(levels);
   assert.equal(overrides.bridgeGap, 3);
@@ -112,9 +112,23 @@ test('an untrusted workspace does not choose where patches go; the user still ca
   const levels = {
     inspect: (key: string) =>
       key === 'out'
-        ? { key: 'hatch.out', workspaceValue: '/elsewhere/', globalValue: 'patches/' }
-        : { key: `hatch.${key}`, workspaceValue: key === 'exact' ? true : undefined },
+        ? { key: 'sir.out', workspaceValue: '/elsewhere/', globalValue: 'patches/' }
+        : { key: `sir.${key}`, workspaceValue: key === 'exact' ? true : undefined },
   } as unknown as WorkspaceConfiguration;
   assert.deepEqual(overridesFrom(levels, false), { out: 'patches/', exact: true });
   assert.deepEqual(overridesFrom(levels, true), { out: '/elsewhere/', exact: true });
+});
+
+// ---- what mutation testing found unchecked (docs/15-test-plan.md, stage 4c) ----
+
+test('a workspace is trusted unless the caller says otherwise', () => {
+  const levels = {
+    inspect: (key: string) => (key === 'out' ? { key: 'sir.out', workspaceValue: '/elsewhere/' } : { key: `sir.${key}` }),
+  } as unknown as WorkspaceConfiguration;
+  assert.deepEqual(overridesFrom(levels), { out: '/elsewhere/' });
+});
+
+test('a key the editor knows nothing of is unset', () => {
+  const unknown = { inspect: () => undefined } as unknown as WorkspaceConfiguration;
+  assert.equal(explicit(unknown, 'language'), undefined);
 });

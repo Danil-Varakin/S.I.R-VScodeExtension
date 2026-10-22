@@ -2,7 +2,7 @@
  * Which cached indexes a changed document invalidates.
  *
  * Deliberately kept apart from the values it guards. An index is dropped the moment
- * its `.hatch` is touched, so a table that lived inside the value map would forget the
+ * its `.sirp` is touched, so a table that lived inside the value map would forget the
  * entry along with it — and then the second keystroke of a burst, and every edit
  * arriving while a rebuild is in flight, would look unrelated to anything the cache
  * holds and would never schedule a rebuild. The result was a stale table that

@@ -16,8 +16,8 @@ import { placedCount } from '../navigation/hunks.ts';
 import { isPatch } from '../navigation/place.ts';
 import { isNothingToCheck } from '../feedback/verdict.ts';
 
-const ITEM_ID = 'hatch.status';
-const ITEM_NAME = 'Hatch';
+const ITEM_ID = 'sir.status';
+const ITEM_NAME = 'S.I.R';
 
 interface StatusView {
   readonly text: string;
@@ -46,7 +46,7 @@ export function createStatusBar(
   let typing: ReturnType<typeof setTimeout> | undefined;
   const refresh = (): void => {
     const token = ++generation;
-    // a closed gate: no hatch here, and the core is not started to say so (C1)
+    // a closed gate: no sir here, and the core is not started to say so (C1)
     if (!gate.isOpen) {
       bar.hide();
       return;
@@ -129,7 +129,7 @@ async function update(
   } catch (e) {
     // a core that is missing or of another protocol: said here, not left to the host's log
     view = {
-      text: '$(error) Hatch',
+      text: '$(error) S.I.R',
       tooltip: `${errorMessage(e)}\nClick for the log.`,
       command: COMMANDS.showLog,
     };
@@ -140,7 +140,7 @@ async function update(
 
 function patchView(state: IndexState, patchName: string): StatusView {
   const view = (icon: string, text: string, tooltip: string): StatusView => ({
-    text: `$(${icon}) Hatch: ${text}`,
+    text: `$(${icon}) Sir: ${text}`,
     tooltip: `${tooltip}\nClick for the last resolve in the log.`,
     command: COMMANDS.showLog,
   });
@@ -185,7 +185,7 @@ async function guardView(
   });
   const { icon, text, tooltip } = guardViews()[guard];
   return {
-    text: `$(${icon}) Hatch: ${text}`,
+    text: `$(${icon}) Sir: ${text}`,
     tooltip: `${tooltip}\nPatch: ${link.uri.fsPath}\nClick to compare.`,
     command: guard === 'edits-not-in-patch' ? COMMANDS.showEditsNotInPatch : COMMANDS.previewPatch,
   };
@@ -194,7 +194,7 @@ async function guardView(
 /** The base a generate from this file would compare against — as the core resolves it now. */
 async function baseView(project: Project, uri: vscode.Uri): Promise<StatusView> {
   const view = (text: string, tooltip: string): StatusView => ({
-    text: `$(git-compare) Hatch: ${text}`,
+    text: `$(git-compare) S.I.R: ${text}`,
     tooltip: `${tooltip}\nClick for details in the log.`,
     command: COMMANDS.showBase,
   });
@@ -210,7 +210,7 @@ async function baseView(project: Project, uri: vscode.Uri): Promise<StatusView> 
       }
       return {
         ...view('base unavailable', `The git base cannot be read now: ${base.reason}`),
-        text: '$(warning) Hatch: base unavailable',
+        text: '$(warning) S.I.R: base unavailable',
       };
   }
 }

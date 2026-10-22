@@ -1,8 +1,8 @@
-import type { ConfigResult, GitSourceParams } from '../service/protocol.ts';
+import type { ConfigResultV5, GitSourceParams } from '../service/protocol.ts';
 import { EDITOR_EOL } from '../settings.ts';
 
 // Which old version this run compares against, decided from the core's own answer to
-// `config` — never from reading hatch.config.json here. Pure, so it is tested alone.
+// `config` — never from reading sir.config.json here. Pure, so it is tested alone.
 
 export type EffectiveBase =
   /** the file as saved on disk, sent as text: no base named anywhere, or the settings say so */
@@ -26,9 +26,9 @@ export type EffectiveBase =
 const EOL_PATH = 'generate.base.eol';
 const UNSET = 'default';
 
-/** `chosenEol`: `hatch.base.eol` when set — it wins over the config's endings and the
+/** `chosenEol`: `sir.base.eol` when set — it wins over the config's endings and the
  *  editor's default alike (E1), whether or not the settings name the base too. */
-export function effectiveBase(config: ConfigResult, chosenEol?: GitSourceParams['eol']): EffectiveBase {
+export function effectiveBase(config: ConfigResultV5, chosenEol?: GitSourceParams['eol']): EffectiveBase {
   const { base, settings, origins } = config;
   // null: nothing names a base, so `generate` would refuse — the saved file is ours to send
   if (base === null || base.kind === 'text') return { kind: 'saved' };

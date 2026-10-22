@@ -40,14 +40,14 @@ export type Verdict =
   | { readonly kind: 'placed'; readonly line: number | undefined }
   | { readonly kind: 'unapplied'; readonly line: number | undefined }
   /** the base is the saved file and the code is that file: nothing to compare (Q1) */
-  | { readonly kind: 'nothing-to-check' }
+  | { readonly kind: 'nothing-to-check'; readonly line: number | undefined }
   | { readonly kind: 'drifted' }
   | { readonly kind: 'unresolved' };
 
 export type Severity = 'error' | 'warning';
 
 export interface Problem {
-  /** 1-based line in the `.hatch` */
+  /** 1-based line in the `.sirp` */
   readonly line: number;
   readonly message: string;
   readonly severity: Severity;
@@ -59,24 +59,25 @@ export const DRIFTED_MESSAGE =
   'the code no longer holds what this hunk writes; regenerate the patch';
 
 /**
- * The glyph that opens a lens title.
+ * The dot that opens a lens title: does the hunk land? Green, yellow, red — and nothing
+ * about whether the patch is in the code, which is one fact about the whole file and is
+ * said once, after the patch's header (`feedback/applied.ts`). A white circle for «lands,
+ * not applied» read as «unknown» on every hunk of every fresh checkout, where not applied
+ * is the normal state.
  *
- * Emoji, not the plain `✓ ○ ⚠ ✗` they replaced, and for one reason: a CodeLens carries
- * nothing but `title` and `tooltip`, and the editor paints every lens in the theme's
- * `editorCodeLens.foreground` — one grey for all of them, which no extension can set per
- * lens (API reference, `CodeLens`). An emoji brings its own colour with it, so the
- * verdict is readable at a glance instead of being spelled out in grey words. `⚠` needs
- * U+FE0F to be drawn as emoji rather than as text; the rest are emoji by default.
+ * Emoji, and for one reason: a CodeLens carries nothing but `title` and `tooltip`, and the
+ * editor paints every lens in the theme's `editorCodeLens.foreground` — one grey for all
+ * of them, which no extension can set per lens (API reference, `CodeLens`). An emoji
+ * brings its own colour with it.
  *
  * The hunk's own header also gets a coloured mark (`feedback/highlight.ts`), which is the
  * one place a real theme colour can be used.
  */
 export const GLYPH = {
-  placed: '✅',
-  unapplied: '⚪',
-  drifted: '⚠️',
-  nothingToCheck: '⬜',
-  unresolved: '❌',
+  /** placed, not applied yet, or nothing to check: the hunk has its place */
+  lands: '🟢',
+  drifted: '🟡',
+  unresolved: '🔴',
 } as const;
 
 export function verdictOf(hunk: HunkLink, texts: Texts): Verdict {
@@ -97,8 +98,10 @@ function judge(hunk: HunkLink, texts: Texts, memo: Memo): Verdict {
       return { kind: 'placed', line: lineOf(memo.target, hunk.final) };
     case 'unapplied':
       // just saved: the base became the buffer, and the patch's edit is in both
-      if (isNothingToCheck(texts)) return { kind: 'nothing-to-check' };
-      return { kind: 'unapplied', line: lineOf(memo.baseline, hunk.base) };
+      return {
+        kind: isNothingToCheck(texts) ? 'nothing-to-check' : 'unapplied',
+        line: lineOf(memo.baseline, hunk.base),
+      };
     case 'drifted':
       return { kind: 'drifted' };
   }
@@ -107,13 +110,12 @@ function judge(hunk: HunkLink, texts: Texts, memo: Memo): Verdict {
 export function lensTitle(hunk: HunkLink, verdict: Verdict, target: string): string {
   switch (verdict.kind) {
     case 'placed':
-      return `${GLYPH.placed} ${where(target, verdict.line)}${hunk.dependsOnEarlier ? ' · depends on an earlier hunk' : ''}`;
     case 'unapplied':
-      return `${GLYPH.unapplied} not applied · ${where(target, verdict.line)}`;
+    case 'nothing-to-check':
+      // in the code or in the base: where it is, or where it would go
+      return `${GLYPH.lands} ${where(target, verdict.line)}${hunk.dependsOnEarlier ? ' · depends on an earlier hunk' : ''}`;
     case 'drifted':
       return `${GLYPH.drifted} differs from the code — regenerate?`;
-    case 'nothing-to-check':
-      return NOTHING_TO_CHECK(target);
     case 'unresolved':
       return `${GLYPH.unresolved} ${shortFailure(hunk)}`;
   }
@@ -124,6 +126,27 @@ export function problemsOf(hunks: readonly HunkLink[], texts: Texts): Problem[] 
   for (const hunk of hunks) {
     const problem = problemOf(hunk, verdictOf(hunk, texts));
     if (problem !== undefined) out.push(problem);
+  }
+  return out;
+}
+
+/**
+ * What Check All can say of a patch no editor holds: the core's answer without the two
+ * texts, so the hunks that land nowhere or in too many places — drift needs the code and
+ * is left to the editor. Every such hunk is said somewhere: one with no line of its own
+ * is said on its first line, or on the header.
+ */
+export function unresolvedProblems(hunks: readonly HunkLink[]): Problem[] {
+  const out: Problem[] = [];
+  for (const hunk of hunks) {
+    if (hunk.status === 'ok') continue;
+    out.push(
+      problemOf(hunk, { kind: 'unresolved' }) ?? {
+        line: hunk.mdSpan?.[0] ?? 1,
+        message: hunk.failure === undefined ? hunk.status : describeFailure(hunk.failure, hunk.status),
+        severity: 'error',
+      },
+    );
   }
   return out;
 }
@@ -151,9 +174,6 @@ function problemOf(hunk: HunkLink, verdict: Verdict): Problem | undefined {
 export function isNothingToCheck(texts: Texts): boolean {
   return texts.base?.kind === 'saved' && texts.targetText === texts.baselineText;
 }
-
-export const NOTHING_TO_CHECK = (target: string): string =>
-  `${GLYPH.nothingToCheck} nothing to check: ${target} has no unsaved edits — the base is the saved file; name a git base (generate.base) for patches that live in the repository`;
 
 function shortFailure(hunk: HunkLink): string {
   const failure = hunk.failure;

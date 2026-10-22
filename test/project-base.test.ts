@@ -35,7 +35,7 @@ test('a git base is named by its coordinates, read with the disk endings when no
 });
 
 test('endings chosen in the config or the settings are kept, repository included', () => {
-  const base = effectiveBase(config(GIT, { baseHead: true, baseCommit: 'abc' }, 'config /r/hatch.config.json'));
+  const base = effectiveBase(config(GIT, { baseHead: true, baseCommit: 'abc' }, 'config /r/sir.config.json'));
   assert.equal(base.kind === 'git' ? base.git.eol : undefined, 'repository');
   assert.equal(base.kind === 'git' ? base.git.commit : undefined, 'abc');
 });
@@ -57,4 +57,17 @@ test('a git base that cannot be read is said so, never swapped for the saved fil
     gitReason: 'no-such-file',
   });
   assert.match(describeBase(base), /unavailable: .*no such file in HEAD/);
+});
+
+test('a reason the core gives that is not a word is not passed on as one', () => {
+  const unavailable = {
+    kind: 'unavailable',
+    error: { kind: 'GitError', message: 'git failed', exitCode: 6, detail: { reason: 42 } },
+  } as const;
+  const base = effectiveBase(config(unavailable, { baseHead: true }));
+  assert.equal(base.kind === 'unavailable' && base.gitReason, undefined);
+});
+
+test('the saved file is named as such', () => {
+  assert.equal(describeBase({ kind: 'saved' }), 'saved file');
 });

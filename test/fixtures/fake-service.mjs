@@ -1,9 +1,9 @@
 // A stand-in for the core, for what the real one cannot be made to do on cue: a
 // `generate` that runs until it is cancelled, a core without `cancel`, one that agrees to
-// stop and never does. HATCH_FAKE_MODE picks which: polite (default), no-cancel, stuck.
+// stop and never does. SIR_FAKE_MODE picks which: polite (default), no-cancel, stuck.
 import { createInterface } from 'node:readline';
 
-const mode = process.env.HATCH_FAKE_MODE ?? 'polite';
+const mode = process.env.SIR_FAKE_MODE ?? 'polite';
 const send = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
 const refuse = (id, kind, message) => send({ id, ok: false, error: { kind, message, exitCode: 1 } });
 
@@ -11,7 +11,7 @@ for await (const line of createInterface({ input: process.stdin })) {
   const { id, method, params } = JSON.parse(line);
   switch (method) {
     case 'version':
-      send({ id, ok: true, result: { hatch: '9.9.9', protocol: 4, protocolMin: 4, configSchema: 2, languages: [] } });
+      send({ id, ok: true, result: { sir: '9.9.9', protocol: 5, protocolMin: 5, configSchema: 3, languages: [] } });
       break;
     case 'generate':
       break; // runs until it is cancelled

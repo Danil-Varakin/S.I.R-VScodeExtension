@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { RESTRICTED_SETTINGS } from '../src/settings.ts';
 
 // E1 (CONTRIBUTING.md): every `generate.*` key of the core's newest config schema has a
-// `hatch.*` setting of the same path, and there is no `hatch.*` setting without a key.
+// `sir.*` setting of the same path, and there is no `sir.*` setting without a key.
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -28,7 +28,7 @@ function leaves(schema: JsonSchema, prefix = ''): string[] {
 }
 
 test('E1: the editor settings are the config keys, one for one', () => {
-  const schema = readJson<JsonSchema>(join(ROOT, 'node_modules', 'hatch', 'hatch.config.schema.json'));
+  const schema = readJson<JsonSchema>(join(ROOT, 'node_modules', 'sir', 'sir.config.schema.json'));
   const generate = schema.properties?.['generate'];
   assert.ok(generate !== undefined, 'the core schema has generate');
   const keys = leaves(generate).sort();
@@ -37,18 +37,18 @@ test('E1: the editor settings are the config keys, one for one', () => {
     contributes: { configuration: { properties: Record<string, unknown> } };
   }>(join(ROOT, 'package.json'));
   const settings = Object.keys(manifest.contributes.configuration.properties)
-    .map((name) => name.replace(/^hatch\./, ''))
+    .map((name) => name.replace(/^sir\./, ''))
     .sort();
 
   assert.deepEqual(
     keys.filter((k) => !settings.includes(k)),
     [],
-    'a config key with no hatch.* setting: add it in package.json (E1)',
+    'a config key with no sir.* setting: add it in package.json (E1)',
   );
   assert.deepEqual(
     settings.filter((s) => !keys.includes(s)),
     [],
-    'a hatch.* setting with no config key: remove it, or exempt it with its reason in CONTRIBUTING.md (E1)',
+    'a sir.* setting with no config key: remove it, or exempt it with its reason in CONTRIBUTING.md (E1)',
   );
 });
 
@@ -57,7 +57,7 @@ test('the settings an untrusted workspace may not set are the ones the code igno
     join(ROOT, 'package.json'),
   );
   const declared = manifest.capabilities.untrustedWorkspaces.restrictedConfigurations
-    .map((name) => name.replace(/^hatch\./, ''))
+    .map((name) => name.replace(/^sir\./, ''))
     .sort();
   assert.deepEqual(declared, [...RESTRICTED_SETTINGS].sort());
 });

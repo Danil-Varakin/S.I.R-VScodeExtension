@@ -50,7 +50,7 @@ export interface Place {
 export function questionFor(place: Place): Question | undefined {
   if (!place.allowed) {
     return {
-      title: `This workspace is not trusted, and its hatch config sends the patch outside it: ${place.patchPath}`,
+      title: `This workspace is not trusted, and its sir config sends the patch outside it: ${place.patchPath}`,
       detail: 'Write the patch there anyway?',
       buttons: [WRITE_THERE],
     };

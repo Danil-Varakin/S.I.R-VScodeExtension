@@ -6,7 +6,7 @@ export type UnreadyState = Exclude<IndexState, { kind: 'ready' }>;
 
 /** What the user can do about a table that could not be built. */
 export type Remedy =
-  /** the `.hatch` itself is broken: its squiggle is where to go */
+  /** the `.sirp` itself is broken: its squiggle is where to go */
   | 'show-parse-error'
   /** nothing, or the wrong thing, names the patched file: its `Target` header is where to fix it */
   | 'show-header'

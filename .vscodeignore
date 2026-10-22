@@ -1,5 +1,5 @@
 # Only what the editor runs goes into the .vsix: the bundle, the manifest, the docs and
-# node_modules/hatch (the core, spawned as a process). Everything else stays out.
+# node_modules/sir (the core, spawned as a process). Everything else stays out.
 src/**
 test/**
 .vscode/**
@@ -10,12 +10,20 @@ docs/**
 tsconfig.json
 esbuild.mjs
 .gitignore
-CLAUDE.md
-CLAUDE.local.md
-.claude/**
+# files of this machine only: every markdown file at the root but the three below, every
+# hidden directory
+*.md
+!README.md
+!README.ru.md
+!CHANGELOG.md
+.*/**
 scripts/**
 examples/**
 .vscode-test.mjs
+stryker.config.mjs
+.stryker-tmp/**
+reports/**
+coverage/**
 out/**
 .vscode-test/**
 *.vsix
@@ -23,10 +31,9 @@ out/**
 CONTRIBUTING.md
 CONTRIBUTING.ru.md
 ARCHITECTURE.md
-SECURITY.md
 
 # ---- the core -------------------------------------------------------------------------
-# `hatch` is the release tarball (package.json), so node_modules holds the core's own
+# `sir` is the release tarball (package.json), so node_modules holds the core's own
 # package and its runtime closure — nothing of its build tree, its sources or its dev
 # dependencies, which the tarball does not carry.
 #
@@ -36,7 +43,7 @@ SECURITY.md
 #
 # NOTE: nothing is re-included with `!` here. A negation beats every ignore rule in vsce,
 # so one `!node_modules/.../**` line would carry the typings of that package back in.
-# The development link (`npm install --no-save ../HatchTS`) cannot be packaged at all —
+# The development link (`npm install --no-save ../S.I.R`) cannot be packaged at all —
 # vsce refuses a path above the package root — and `npm run package` stops on it.
 
 # session reports, written beside the repository and belonging to nobody's install

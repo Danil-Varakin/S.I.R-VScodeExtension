@@ -4,7 +4,7 @@ import { lensTitle, verdictOf } from '../feedback/verdict.ts';
 import { PATCH_LANGUAGE } from '../patch-files.ts';
 import { workspacePath } from '../workspace-fs.ts';
 
-// Outline and breadcrumbs of a `.hatch`: its hunks, each with the verdict its lens shows.
+// Outline and breadcrumbs of a `.sirp`: its hunks, each with the verdict its lens shows.
 // The spans are the core's (`mdSpan`, `noteSpan`); a patch that does not resolve has none.
 
 export function createPatchSymbols(cache: PatchIndexCache): vscode.Disposable {
@@ -33,7 +33,7 @@ export function createPatchSymbols(cache: PatchIndexCache): vscode.Disposable {
       return symbols;
     },
   };
-  return vscode.languages.registerDocumentSymbolProvider({ language: PATCH_LANGUAGE }, provider, { label: 'Hatch' });
+  return vscode.languages.registerDocumentSymbolProvider({ language: PATCH_LANGUAGE }, provider, { label: 'S.I.R' });
 }
 
 /** How long a table is waited for before the one at hand is answered with instead. */

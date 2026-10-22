@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { basename } from 'node:path';
 import type { ResolveParams, ResolveResultMessage } from '../service/protocol.ts';
 import { ERROR_KIND } from '../service/protocol.ts';
-import type { HatchService } from '../service/client.ts';
+import type { SirService } from '../service/client.ts';
 import type { Log } from '../ui/log.ts';
 import type { Project } from '../project/project.ts';
 import { chosenEolOf } from '../project/project.ts';
@@ -10,7 +10,7 @@ import { effectiveBase } from '../project/base.ts';
 import type { BaselineDocuments } from '../baseline/documents.ts';
 import { baselineUri } from '../baseline/documents.ts';
 import { NoBaselineError, savedBaseline } from '../baseline/saved.ts';
-import { HatchServiceError, ServiceGoneError, errorMessage } from '../errors.ts';
+import { SirServiceError, ServiceGoneError, errorMessage } from '../errors.ts';
 import { readLiveText } from '../workspace-fs.ts';
 import { summarise } from './failure.ts';
 import { placedCount } from './hunks.ts';
@@ -20,14 +20,14 @@ import type { IndexState, PatchIndex } from './patch-index.ts';
 type Resolved = Pick<PatchIndex, 'base' | 'baselineUri' | 'baselineText' | 'hunks' | 'warnings'>;
 
 export interface IndexBuilderDeps {
-  readonly service: HatchService;
+  readonly service: SirService;
   readonly project: Project;
   readonly baselines: BaselineDocuments;
   readonly log: Log;
 }
 
 /**
- * Builds the table of links for one `.hatch`: which file it patches, against which base,
+ * Builds the table of links for one `.sirp`: which file it patches, against which base,
  * and where every hunk lands there. Every way that can end is a state of its own — the
  * rule is that we say what went wrong, never jump somewhere plausible.
  */
@@ -56,7 +56,7 @@ export class IndexBuilder {
         index: { mdUri, mdText, targetUri: link.uri, targetText, ...resolved },
       };
     } catch (e) {
-      if (e instanceof HatchServiceError && e.kind === ERROR_KIND.parse) {
+      if (e instanceof SirServiceError && e.kind === ERROR_KIND.parse) {
         return { kind: 'parse-error', mdLine: e.mdLine, message: e.message };
       }
       if (e instanceof NoBaselineError) {
@@ -73,7 +73,7 @@ export class IndexBuilder {
    * and the hunks resolved there. The saved file is read here and sent; a git base is
    * named and the core answers with its text, which is the only way to see it. With a
    * git base the patch is resolved by its own path (N6): the core finds the code by its
-   * `Target` and reads the base, as `hatch apply` would; the editor settings still name
+   * `Target` and reads the base, as `sir apply` would; the editor settings still name
    * the revision. The warnings about significant whitespace come with every answer (B5).
    */
   private async resolveAgainstBase(
@@ -148,7 +148,7 @@ export class IndexBuilder {
 
 /**
  * `resolve` reads only the patch and the base, so typing in the code changes neither: the
- * last table stands while the `.hatch`, the target and the base are the same. A git base is
+ * last table stands while the `.sirp`, the target and the base are the same. A git base is
  * the same when it is the same commit; a saved one, when its text is (checked by the caller).
  */
 function reusable(

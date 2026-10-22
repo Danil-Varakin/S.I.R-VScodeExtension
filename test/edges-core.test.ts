@@ -6,11 +6,11 @@ import { fileURLToPath } from 'node:url';
 
 // Audit, 2026-10-06: the coordinates navigation relies on, against the real core, at the
 // edges the existing tests do not reach. Expectations from PROTOCOL.md ("The link table":
-// UTF-16 offsets, `base` is what a hunk REPLACES, hunks in the order of the .hatch;
+// UTF-16 offsets, `base` is what a hunk REPLACES, hunks in the order of the .sirp;
 // "Transport": replies by id) and README ("the same two file versions then produce the
 // same patch in the terminal, in the editor and in CI").
 
-import { HatchService, serviceEntry } from '../src/service/client.ts';
+import { SirService, serviceEntry } from '../src/service/client.ts';
 import type { Log } from '../src/ui/log.ts';
 import { hunkAtMdLine, hunkAtOffset, stillMatches, trimmed } from '../src/navigation/hunks.ts';
 import { isSupportedFile } from '../src/project/languages.ts';
@@ -22,8 +22,8 @@ const silent: Log = {
   stderr: () => {}, show: () => {}, dispose: () => {},
 };
 
-async function withCore<T>(run: (client: HatchService) => Promise<T>): Promise<T> {
-  const client = new HatchService(SERVICE, undefined, silent);
+async function withCore<T>(run: (client: SirService) => Promise<T>): Promise<T> {
+  const client = new SirService(SERVICE, undefined, silent);
   try {
     return await run(client);
   } finally {
@@ -31,7 +31,7 @@ async function withCore<T>(run: (client: HatchService) => Promise<T>): Promise<T
   }
 }
 
-async function table(client: HatchService, base: string, next: string) {
+async function table(client: SirService, base: string, next: string) {
   const { patch } = await client.request('generate', { baseText: base, newText: next, path: PATH });
   const { hunks } = await client.request('resolve', { patch, baseText: base, path: PATH });
   return { patch, hunks };
@@ -71,7 +71,7 @@ test('two edits far apart: two hunks, in order, each found from its own line', a
     const { hunks } = await table(client, base, next);
     assert.equal(hunks.length, 2);
     assert.deepEqual(hunks.map((h) => h.index), [0, 1]);
-    assert.ok(hunks[0]!.mdSpan![1] < hunks[1]!.mdSpan![0], 'in the order of the .hatch');
+    assert.ok(hunks[0]!.mdSpan![1] < hunks[1]!.mdSpan![0], 'in the order of the .sirp');
     const top = hunkAtOffset(hunks, next.indexOf('added_top'), 'final');
     const bottom = hunkAtOffset(hunks, next.indexOf('added_bottom'), 'final');
     assert.equal(top.kind === 'exact' && top.hunk.index, 0);
@@ -143,12 +143,12 @@ test('resolves sent together each get their own table (PROTOCOL: answered when d
   });
 });
 
-test('the core\'s own languages make .cc and .h files to generate from, and a .hatch not one (D3)', async () => {
+test('the core\'s own languages make .cc and .h files to generate from, and a .sirp not one (D3)', async () => {
   await withCore(async (client) => {
     const { languages } = await client.version();
     assert.equal(isSupportedFile('/w/a.cc', languages), true);
     assert.equal(isSupportedFile('/w/a.h', languages), true);
-    assert.equal(isSupportedFile('/w/a.cc.hatch', languages), false);
+    assert.equal(isSupportedFile('/w/a.cc.sirp', languages), false);
     assert.equal(isSupportedFile('/w/README.md', languages), false);
   });
 });

@@ -1,7 +1,7 @@
-// Writes syntaxes/hatch.tmLanguage.json from the core this extension is built with.
+// Writes syntaxes/sir.tmLanguage.json from the core this extension is built with.
 import { writeFile } from 'node:fs/promises';
-import { adapterForLanguage, supportedLanguages } from 'hatch';
-import { grammarFor } from './hatch-grammar.mjs';
+import { adapterForLanguage, supportedLanguages } from 'sir';
+import { grammarFor } from './sir-grammar.mjs';
 
 export function coreAliases() {
   const aliases = {};
@@ -17,6 +17,6 @@ export function grammarText() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  await writeFile(new URL('../syntaxes/hatch.tmLanguage.json', import.meta.url), grammarText());
-  console.log('wrote syntaxes/hatch.tmLanguage.json');
+  await writeFile(new URL('../syntaxes/sir.tmLanguage.json', import.meta.url), grammarText());
+  console.log('wrote syntaxes/sir.tmLanguage.json');
 }

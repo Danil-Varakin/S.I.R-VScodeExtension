@@ -16,6 +16,11 @@ function show(severity: Severity, message: string, actions: readonly string[]): 
   }
 }
 
+/** A message with several actions; the one the user took, if any. */
+export function choose(severity: Severity, message: string, actions: readonly string[]): Thenable<string | undefined> {
+  return show(severity, message, actions);
+}
+
 /** A message with one action; true when the user took it. */
 export async function offer(severity: Severity, message: string, action: string): Promise<boolean> {
   return (await show(severity, message, [action])) === action;
@@ -30,5 +35,5 @@ export async function offerLog(message: string, log: Log, severity: Severity = '
 export async function reportError(e: unknown, log: Log): Promise<void> {
   const message = errorMessage(e);
   log.error(message);
-  await offerLog(`hatch: ${message}`, log);
+  await offerLog(`sir: ${message}`, log);
 }

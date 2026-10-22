@@ -14,4 +14,4 @@ labels: enhancement
 **What would help**
 
 <!-- If it needs the core to know something new (where a patch goes, how a hunk matches),
-     say so: that part belongs in hatch, and the extension only shows its answer. -->
+     say so: that part belongs in sir, and the extension only shows its answer. -->

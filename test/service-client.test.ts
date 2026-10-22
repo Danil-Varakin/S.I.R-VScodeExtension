@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import type { CancellationToken } from 'vscode';
 
 import {
-  HatchService,
+  SirService,
   protocolProblem,
   servedRange,
   serviceEntry,
@@ -15,7 +15,7 @@ import {
 } from '../src/service/client.ts';
 import { SUPPORTED_PROTOCOL } from '../src/service/protocol.ts';
 import {
-  HatchServiceError,
+  SirServiceError,
   RequestCancelledError,
   RequestTimeoutError,
   ServiceGoneError,
@@ -45,8 +45,8 @@ function spawns(log: ReturnType<typeof silentLog>): number {
   return log.lines.filter((l) => l.startsWith('info spawning service')).length;
 }
 
-function service(path = SERVICE): HatchService {
-  return new HatchService(path, undefined, silentLog());
+function service(path = SERVICE): SirService {
+  return new SirService(path, undefined, silentLog());
 }
 
 function fakeToken(): { token: CancellationToken; cancel: () => void } {
@@ -74,7 +74,7 @@ test('version: the service spawns and reports its version and protocol', async (
   const client = service();
   try {
     const version = await client.version();
-    assert.match(version.hatch, /^\d+\.\d+\.\d+/);
+    assert.match(version.sir, /^\d+\.\d+\.\d+/);
     assert.equal(typeof version.protocol, 'number');
     assert.ok(version.languages.includes('cpp'));
   } finally {
@@ -84,7 +84,7 @@ test('version: the service spawns and reports its version and protocol', async (
 
 test('version is cached: a second call does not spawn a second process', async () => {
   const log = silentLog();
-  const client = new HatchService(SERVICE, undefined, log);
+  const client = new SirService(SERVICE, undefined, log);
   try {
     await client.version();
     await client.version();
@@ -107,7 +107,7 @@ test('ensureCompatible accepts the current core and speaks what both sides know'
 
 /** A core announcing protocol `max`, and `min` when it is new enough to say one. */
 function core(max: number, min?: number): VersionResult {
-  return { hatch: 'x', protocol: max, ...(min !== undefined ? { protocolMin: min } : {}), configSchema: 1, languages: [] };
+  return { sir: 'x', protocol: max, ...(min !== undefined ? { protocolMin: min } : {}), configSchema: 1, languages: [] };
 }
 
 test('protocolProblem: a core whose range overlaps ours is compatible, whatever its number', () => {
@@ -120,7 +120,7 @@ test('protocolProblem: a core whose range overlaps ours is compatible, whatever 
 
 test('protocolProblem: no overlap names the side that is behind', () => {
   const { min, max } = SUPPORTED_PROTOCOL;
-  assert.match(protocolProblem(core(min - 1))!.message, /update hatch/);
+  assert.match(protocolProblem(core(min - 1))!.message, /update sir/);
   assert.match(protocolProblem(core(max + 3, max + 1))!.message, /update the extension/);
   const e = protocolProblem(core(max + 3, max + 1))!;
   assert.deepEqual(e.served, { min: max + 1, max: max + 3 });
@@ -148,15 +148,15 @@ test('a missing service entry reports the path it looked at', async () => {
   }
 });
 
-test('a call-level failure arrives as HatchServiceError with machine-readable fields', async () => {
+test('a call-level failure arrives as SirServiceError with machine-readable fields', async () => {
   const client = service();
   try {
     const failure = await client
       .request('resolve', { patch: '# match cpp\nno gutter here\n# end\n', baseText: 'void a(){}\n' })
       .then(() => null, (e: unknown) => e);
 
-    assert.ok(failure instanceof HatchServiceError, `expected HatchServiceError, got: ${String(failure)}`);
-    const error = failure as HatchServiceError;
+    assert.ok(failure instanceof SirServiceError, `expected SirServiceError, got: ${String(failure)}`);
+    const error = failure as SirServiceError;
     assert.equal(error.kind, 'ParseError');
     assert.equal(error.exitCode, 2);
     assert.equal(error.mdLine, 2);
@@ -167,7 +167,7 @@ test('a call-level failure arrives as HatchServiceError with machine-readable fi
 
 test('a cancelled request is told at once, and the service stays up for the next caller', async () => {
   const log = silentLog();
-  const client = new HatchService(SERVICE, undefined, log);
+  const client = new SirService(SERVICE, undefined, log);
   const { token, cancel } = fakeToken();
   try {
     const pending = client.request('version', undefined, { token });
@@ -186,18 +186,18 @@ const FAKE = join(ROOT, 'test', 'fixtures', 'fake-service.mjs');
 
 async function withFake(
   mode: 'polite' | 'no-cancel' | 'stuck',
-  body: (client: HatchService, log: ReturnType<typeof silentLog>) => Promise<void>,
+  body: (client: SirService, log: ReturnType<typeof silentLog>) => Promise<void>,
 ): Promise<void> {
-  const previous = process.env['HATCH_FAKE_MODE'];
-  process.env['HATCH_FAKE_MODE'] = mode;
+  const previous = process.env['SIR_FAKE_MODE'];
+  process.env['SIR_FAKE_MODE'] = mode;
   const log = silentLog();
-  const client = new HatchService(FAKE, undefined, log, { cancelGraceMs: 50 });
+  const client = new SirService(FAKE, undefined, log, { cancelGraceMs: 50 });
   try {
     await body(client, log);
   } finally {
     client.dispose();
-    if (previous === undefined) delete process.env['HATCH_FAKE_MODE'];
-    else process.env['HATCH_FAKE_MODE'] = previous;
+    if (previous === undefined) delete process.env['SIR_FAKE_MODE'];
+    else process.env['SIR_FAKE_MODE'] = previous;
   }
 }
 
@@ -315,12 +315,12 @@ test('configTemplate: the core composes the minimal file and its place, and writ
   const client = service();
   try {
     await client.ensureCompatible();
-    const dir = await mkdtemp(join(tmpdir(), 'hatch-config-'));
+    const dir = await mkdtemp(join(tmpdir(), 'sir-config-'));
     const result = await client.request('configTemplate', {
       path: join(dir, 'a.cc'),
     });
 
-    assert.equal(result.suggestedPath, join(dir, 'hatch.config.json'));
+    assert.equal(result.suggestedPath, join(dir, 'sir.config.json'));
     assert.equal(result.exists, false);
     const text = JSON.parse(result.text) as Record<string, unknown>;
     assert.deepEqual(Object.keys(text), ['$schema', 'version']);
