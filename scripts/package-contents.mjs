@@ -4,7 +4,7 @@
 //
 // The editor needs three things of the package: the bundle it loads (`main`), the files
 // the manifest points at (the grammar, the snippets, the language configuration) and the
-// core it spawns — `node_modules/hatch/dist/service/index.js` (`serviceEntry` in
+// core it spawns — `node_modules/sir/dist/service/index.js` (`serviceEntry` in
 // `service/client.ts`), with the grammars inside the core's own package, because nothing
 // is ever downloaded.
 
@@ -15,13 +15,13 @@ export const REQUIRED = [
   'README.ru.md',
   'CHANGELOG.md',
   'language-configuration.json',
-  'syntaxes/hatch.tmLanguage.json',
-  'snippets/hatch.json',
+  'syntaxes/sir.tmLanguage.json',
+  'snippets/sir.json',
   'dist/extension.cjs',
-  'node_modules/hatch/package.json',
-  'node_modules/hatch/dist/service/index.js',
-  'node_modules/hatch/grammars/tree-sitter-cpp.wasm',
-  'node_modules/hatch/grammars/tree-sitter-python.wasm',
+  'node_modules/sir/package.json',
+  'node_modules/sir/dist/service/index.js',
+  'node_modules/sir/grammars/tree-sitter-cpp.wasm',
+  'node_modules/sir/grammars/tree-sitter-python.wasm',
 ];
 
 /**
@@ -39,12 +39,14 @@ export const FORBIDDEN = [
   { what: 'the extension sources', re: /^src\// },
   { what: 'the tests and their build', re: /^(test|out|\.vscode-test)\// },
   { what: 'the local docs', re: /^docs\// },
-  { what: 'the files of the assistants', re: /^\.claude\/|(^|\/)CLAUDE(\.local)?\.md$/ },
-  { what: 'the files for contributors', re: /^(CONTRIBUTING|CONTRIBUTING\.ru|ARCHITECTURE|SECURITY)\.md$/ },
+  { what: 'a file of this machine only', re: /^\.[^/]+\/|^(?!(README|README\.ru|CHANGELOG)\.md$)[^/]+\.md$/ },
+  { what: 'the files for contributors', re: /^(CONTRIBUTING|CONTRIBUTING\.ru|ARCHITECTURE)\.md$/ },
   { what: 'the repository plumbing', re: /^(\.github|\.vscode|scripts|examples)\// },
-  { what: 'the build configuration', re: /^(tsconfig.*\.json|esbuild\.mjs|\.vscode-test\.mjs)$/ },
+  { what: 'the build configuration', re: /^(tsconfig.*\.json|esbuild\.mjs|\.vscode-test\.mjs|stryker\.config\.mjs)$/ },
+  { what: 'the mutation run and its report', re: /^(\.stryker-tmp|reports)\// },
+  { what: 'the coverage report', re: /^coverage\// },
   { what: 'TypeScript sources and source maps', re: /\.ts$|\.map$/ },
-  { what: "the core's build tree and sources", re: /^node_modules\/hatch\/(src|test|docs|scripts|build)\// },
+  { what: "the core's build tree and sources", re: /^node_modules\/sir\/(src|test|docs|scripts|build)\// },
   { what: 'a packaged extension', re: /\.vsix$/ },
 ];
 

@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       core:
-        description: 'hatchTs revision for the dev cell (branch, tag or commit)'
+        description: 'sirTs revision for the dev cell (branch, tag or commit)'
         default: dev
 
 concurrency:
@@ -29,6 +29,8 @@ concurrency:
 
 env:
   CORE_REF: ${{ inputs.core || 'dev' }}
+  # the unit tests check their timings here (npm run test:perf does the same locally)
+  SIR_PERF: '1'
 
 jobs:
   test:
@@ -41,12 +43,12 @@ jobs:
         core: [release, dev]
     defaults:
       run:
-        working-directory: HatchVSCodeExtension-
+        working-directory: S.I.R-VScodeExtension
 
     steps:
       - uses: actions/checkout@v4
         with:
-          path: HatchVSCodeExtension-
+          path: S.I.R-VScodeExtension
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -58,19 +60,19 @@ jobs:
       - uses: actions/checkout@v4
         if: matrix.core == 'dev'
         with:
-          repository: Danil-Varakin/hatchTs
+          repository: Danil-Varakin/S.I.R
           ref: ${{ env.CORE_REF }}
-          path: HatchTS
+          path: S.I.R
       - name: the core from its checkout, in place of the release
         if: matrix.core == 'dev'
-        working-directory: HatchTS
+        working-directory: S.I.R
         run: |
           npm ci
           npm run grammars
           npm run build
       - name: link it
         if: matrix.core == 'dev'
-        run: npm install --no-save ../HatchTS
+        run: npm install --no-save ../S.I.R
 
       - name: typecheck and unit tests
         run: npm run check
@@ -79,8 +81,8 @@ jobs:
         if: runner.os != 'macOS'
         uses: actions/cache@v4
         with:
-          path: HatchVSCodeExtension-/.vscode-test
-          key: vscode-test-${{ runner.os }}-${{ hashFiles('HatchVSCodeExtension-/package-lock.json') }}
+          path: S.I.R-VScodeExtension/.vscode-test
+          key: vscode-test-${{ runner.os }}-${{ hashFiles('S.I.R-VScodeExtension/package-lock.json') }}
 
       # dbus-run-session: without a session bus the editor's window sometimes never finishes
       # starting on the runner ("CodeWindow: detected unresponsive", before the first test)
@@ -89,13 +91,13 @@ jobs:
         run: xvfb-run -a dbus-run-session -- npm run test:e2e
         env:
           # the editor's profile, short: it holds a unix socket, and the checkout is deep
-          HATCH_TEST_USER_DATA: ${{ runner.temp }}/vsc
+          SIR_TEST_USER_DATA: ${{ runner.temp }}/vsc
       - name: end-to-end tests
         if: runner.os == 'Windows'
         run: npm run test:e2e
         env:
           # the editor's profile, short: it holds a unix socket, and the checkout is deep
-          HATCH_TEST_USER_DATA: ${{ runner.temp }}/vsc
+          SIR_TEST_USER_DATA: ${{ runner.temp }}/vsc
 
   package:
     name: .vsix
@@ -147,10 +149,10 @@ jobs:
         run: xvfb-run -a dbus-run-session -- npm run test:packaged
         env:
           # the editor's profile, short: it holds a unix socket, and the checkout is deep
-          HATCH_TEST_USER_DATA: ${{ runner.temp }}/vsc
+          SIR_TEST_USER_DATA: ${{ runner.temp }}/vsc
       - name: the suite against the installed package
         if: runner.os == 'Windows'
         run: npm run test:packaged
         env:
           # the editor's profile, short: it holds a unix socket, and the checkout is deep
-          HATCH_TEST_USER_DATA: ${{ runner.temp }}/vsc
+          SIR_TEST_USER_DATA: ${{ runner.temp }}/vsc

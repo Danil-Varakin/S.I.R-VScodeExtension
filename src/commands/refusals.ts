@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { basename } from 'node:path';
 import type { HunkLink } from '../service/protocol.ts';
-import type { HatchDeps } from '../deps.ts';
+import type { SirDeps } from '../deps.ts';
 import type { LocateResult } from '../navigation/context.ts';
 import type { PatchIndex } from '../navigation/patch-index.ts';
 import type { UnreadyState } from '../feedback/state.ts';
@@ -24,14 +24,14 @@ const MOVE_TO_TRASH = 'Move to Trash';
 /** No hunk under the cursor, and why. */
 export async function explainMiss(
   miss: Exclude<LocateResult, { kind: 'found' }>,
-  deps: Pick<HatchDeps, 'log'>,
+  deps: Pick<SirDeps, 'log'>,
 ): Promise<void> {
   switch (miss.kind) {
     case 'no-pair':
-      void vscode.window.showErrorMessage(`hatch: ${describePairReason(miss.reason)}`);
+      void vscode.window.showErrorMessage(`sir: ${describePairReason(miss.reason)}`);
       return;
     case 'no-patch':
-      if (await offer('info', `hatch: no patch at ${miss.patchUri.fsPath}`, ACTIONS.generate)) {
+      if (await offer('info', `sir: no patch at ${miss.patchUri.fsPath}`, ACTIONS.generate)) {
         await vscode.commands.executeCommand(COMMANDS.generate, miss.targetUri);
       }
       return;
@@ -40,14 +40,14 @@ export async function explainMiss(
       return;
     case 'no-hunk':
       void vscode.window.showInformationMessage(
-        miss.side === 'patch' ? 'hatch: this patch has no hunks at all' : 'hatch: no hunk can be placed here',
+        miss.side === 'patch' ? 'sir: this patch has no hunks at all' : 'sir: no hunk can be placed here',
       );
   }
 }
 
-export async function reportState(state: UnreadyState, mdUri: vscode.Uri, deps: Pick<HatchDeps, 'log'>): Promise<void> {
+export async function reportState(state: UnreadyState, mdUri: vscode.Uri, deps: Pick<SirDeps, 'log'>): Promise<void> {
   const view = viewOf(state, basename(mdUri.fsPath));
-  const message = `hatch: ${view.message}`;
+  const message = `sir: ${view.message}`;
   switch (view.remedy) {
     case 'show-parse-error':
       // the squiggle is already published; put the cursor where it is
@@ -74,7 +74,7 @@ export async function reportState(state: UnreadyState, mdUri: vscode.Uri, deps: 
 }
 
 /** To the trash, after a modal yes: the patch is the user's file, and a deleted one comes back from there. */
-export async function deletePatch(mdUri: vscode.Uri, deps: Pick<HatchDeps, 'log'>): Promise<void> {
+export async function deletePatch(mdUri: vscode.Uri, deps: Pick<SirDeps, 'log'>): Promise<void> {
   const choice = await vscode.window.showWarningMessage(
     `Delete ${basename(mdUri.fsPath)}?`,
     { modal: true, detail: `${mdUri.fsPath} goes to the trash.` },
@@ -88,7 +88,7 @@ export async function deletePatch(mdUri: vscode.Uri, deps: Pick<HatchDeps, 'log'
 export async function reportHunkFailure(
   hunk: HunkLink,
   index: PatchIndex,
-  deps: Pick<HatchDeps, 'baselines' | 'log'>,
+  deps: Pick<SirDeps, 'baselines' | 'log'>,
 ): Promise<void> {
   const text = summarise(hunk);
   deps.log.error(text);
@@ -101,20 +101,20 @@ export async function reportHunkFailure(
   }
 
   if (failure?.origPos !== undefined) {
-    if (await offer('error', `hatch: ${text}`, ACTIONS.showInBaseline)) {
+    if (await offer('error', `sir: ${text}`, ACTIONS.showInBaseline)) {
       await showBaselineOffset(deps.baselines, index, failure.origPos);
     }
     return;
   }
 
-  void vscode.window.showErrorMessage(`hatch: ${text}`);
+  void vscode.window.showErrorMessage(`sir: ${text}`);
 }
 
 /** An ambiguous pattern fits several places; every one of them is offered by name. */
 export async function offerCandidates(
   candidates: readonly number[],
   index: PatchIndex,
-  deps: Pick<HatchDeps, 'baselines'>,
+  deps: Pick<SirDeps, 'baselines'>,
 ): Promise<void> {
   const lines = new LineMap(index.baselineText);
   const items = candidates.map((offset) => {

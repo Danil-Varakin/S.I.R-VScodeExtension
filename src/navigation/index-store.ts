@@ -65,7 +65,11 @@ export class IndexStore<S> {
     if (cached !== undefined && !this.hooks.isFailure(cached) && !this.stale.has(key)) {
       return Promise.resolve(cached);
     }
-    return this.building.get(key) ?? this.rebuild(key, cached);
+    // a build under way is joined only while nothing it read has moved: one that began
+    // before an edit of the key itself would hand the command the text from before it
+    const building = this.building.get(key);
+    if (building !== undefined && !this.stale.has(key)) return building;
+    return this.rebuild(key, cached);
   }
 
   /** The last known state, even one a rebuild is about to replace. */

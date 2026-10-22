@@ -28,7 +28,7 @@ suite('feedback in the patch', () => {
     await open(patch);
     await waitForLenses(patch, (t) => t.some((x) => x.startsWith(`${GLYPH.unresolved} `)), 'a broken lens');
     const problem = await waitForDiagnostic(patch, (d) => d.severity === vscode.DiagnosticSeverity.Error, 'an error');
-    assert.equal(problem.source, 'hatch');
+    assert.equal(problem.source, 'sir');
   });
 
   test('code that moved on from the hunk is drifted, a warning in Problems', async () => {
@@ -40,24 +40,45 @@ suite('feedback in the patch', () => {
   });
 
   test('with the saved file as base, a saved file reads nothing to check, not not applied (Q1)', async () => {
+    const sir = await api();
     const { editor, patch } = await generated(file('saved', 's.cc'));
-    await waitForLenses(patch, (t) => t.some((x) => x.startsWith(`${GLYPH.placed} `)), 'a placed lens before saving');
+    await waitForLenses(patch, (t) => t.some((x) => x.startsWith(`${GLYPH.lands} `)), 'a placed lens before saving');
+    await waitFor('applied before saving', () => sir.patchState(patch) === 'applied');
     await editor.document.save();
-    const titles = await waitForLenses(patch, (t) => t.length === 1 && t[0]!.startsWith(`${GLYPH.nothingToCheck} nothing to check`), 'one nothing-to-check lens');
-    assert.ok(!titles.some((x) => x.includes('not applied')));
+    await waitFor('nothing to check after saving', () => sir.patchState(patch) === 'nothing-to-check');
+    // the header says it; no dot per hunk claims anything about a file that is its own base
+    await waitForLenses(patch, (t) => t.length === 0, 'no lens');
+  });
+
+  test('a patch is not applied while its code is its base, and stays known after its tab closes', async () => {
+    const sir = await api();
+    const { editor, patch } = await generated(file('repo', 'src', 'state.cc'));
+    await waitFor('applied', () => sir.patchState(patch) === 'applied');
+    // the code back to its base: what every fresh checkout of upstream reads
+    await setText(editor.document, editor.document.getText().replace('return 2;', 'return 1;'));
+    await waitFor('not applied', () => sir.patchState(patch) === 'not-applied');
+    // every hunk lands, and the patch is ready to apply: the Apply lens over the header
+    const hunkLens = (x: string): boolean => !x.startsWith('▶ Apply to ') && x !== 'Preview';
+    await waitForLenses(
+      patch,
+      (t) => t.some((x) => x.startsWith('▶ Apply to ')) && t.filter(hunkLens).length > 0 && t.filter(hunkLens).every((x) => x.startsWith(`${GLYPH.lands} `)),
+      'every hunk lands',
+    );
+    await closeAll();
+    assert.equal(sir.patchState(patch), 'not-applied', 'the badge stays after the tab closes');
   });
 
   test('a patch that does not parse is underlined on its line', async () => {
-    const patch = file('repo', 'src', 'parse.cc.hatch');
-    await writeFile(patch, 'Hatch: 1\nTarget: src/a.cc\n\n# match cpp\nno gutter here\n# end\n');
+    const patch = file('repo', 'src', 'parse.cc.sirp');
+    await writeFile(patch, 'Sir: 2\nTarget: src/a.cc\n\n# match cpp\nno gutter here\n# end\n');
     await open(patch);
     const problem = await waitForDiagnostic(patch, (d) => d.severity === vscode.DiagnosticSeverity.Error, 'the parse error');
     assert.ok(problem.range.start.line >= 3, `on the body, not the header (line ${problem.range.start.line + 1})`);
   });
 
   test('a header that does not read is said on line 1, in the lens and in Problems (B6)', async () => {
-    const patch = file('repo', 'src', 'header.cc.hatch');
-    await writeFile(patch, 'Hatch: one\nTarget: src/a.cc\n\n# match cpp\n    int f() {\n# end\n# patch\n    x\n# end\n');
+    const patch = file('repo', 'src', 'header.cc.sirp');
+    await writeFile(patch, 'Sir: one\nTarget: src/a.cc\n\n# match cpp\n    int f() {\n# end\n# patch\n    x\n# end\n');
     await open(patch);
     const problem = await waitForDiagnostic(patch, (d) => /header/.test(d.message), 'the header problem');
     assert.equal(problem.range.start.line, 0);
@@ -65,7 +86,7 @@ suite('feedback in the patch', () => {
 
   test('a patch whose file is not in the base revision is an orphan, and Delete Patch… trashes it (B2)', async () => {
     const { text } = await generated(file('repo', 'src', 'orphsrc.cc'));
-    const orphan = file('repo', 'src', 'new.cc.hatch');
+    const orphan = file('repo', 'src', 'new.cc.sirp');
     await writeFile(orphan, text.replace('Target: src/orphsrc.cc', 'Target: src/new.cc'));
     const editor = await open(orphan);
     const problem = await waitForDiagnostic(orphan, (d) => /not in the upstream/.test(d.message), 'the orphan problem');
@@ -74,7 +95,7 @@ suite('feedback in the patch', () => {
     const messages = answerMessages((m) => (m.items.includes('Delete Patch…') ? 'Delete Patch…' : m.items.includes('Move to Trash') ? 'Move to Trash' : undefined));
     try {
       const line = editor.document.getText().split('\n').findIndex((l) => l.startsWith('# match')) + 1;
-      await vscode.commands.executeCommand('hatch.toggle', orphan, line);
+      await vscode.commands.executeCommand('sir.toggle', orphan, line);
       await waitFor('the orphan gone', async () => !(await exists(orphan))).catch((e: unknown) => {
         throw new Error(`${String(e)}; shown: ${JSON.stringify(messages.shown)}; active ${vscode.window.activeTextEditor?.document.uri.fsPath}`);
       });
@@ -108,7 +129,7 @@ suite('feedback in the patch', () => {
     const messages = answerMessages();
     try {
       await setText(editor.document, editor.document.getText().replace('return 10;', 'return 20;'));
-      await vscode.commands.executeCommand('hatch.generate', editor.document.uri);
+      await vscode.commands.executeCommand('sir.generate', editor.document.uri);
       const asked = await waitFor('the dialog', () => messages.shown.find((m) => /already has a patch/.test(m.message)));
       assert.match(asked.detail ?? '', /It has 1 note \(hunk 1\)/);
       assert.deepEqual(asked.items, ['Open Existing', 'Regenerate']);

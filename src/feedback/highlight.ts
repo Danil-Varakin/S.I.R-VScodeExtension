@@ -3,19 +3,19 @@ import { summarise } from '../navigation/failure.ts';
 import type { Texts } from './verdict.ts';
 import { DRIFTED_MESSAGE, verdictOf } from './verdict.ts';
 
-/** Lines of the `.hatch`, counted from 1, both ends included. */
+/** Lines of the `.sirp`, counted from 1, both ends included. */
 export type LineSpan = readonly [number, number];
 
 /**
  * A coloured mark at the end of a hunk's header line — the one piece of this feedback
  * that carries a colour of its own. A CodeLens cannot: it has only `title` and `tooltip`,
  * and the editor paints every lens in `editorCodeLens.foreground` (API reference,
- * `CodeLens`). The two colours this uses, `hatch.brokenHunkForeground` and
- * `hatch.driftedHunkForeground`, were declared in `package.json` from the start — "Mark
+ * `CodeLens`). The two colours this uses, `sir.brokenHunkForeground` and
+ * `sir.driftedHunkForeground`, were declared in `package.json` from the start — "Mark
  * after the header of a … hunk" — and nothing had ever drawn them.
  */
 export interface HunkMark {
-  /** 1-based line of the `.hatch`: the hunk's header */
+  /** 1-based line of the `.sirp`: the hunk's header */
   readonly line: number;
   readonly glyph: string;
   readonly severity: 'error' | 'warning';
@@ -23,7 +23,7 @@ export interface HunkMark {
   readonly hover: string;
 }
 
-/** What is painted over a `.hatch`, beside the diagnostics: the words, the broken hunks. */
+/** What is painted over a `.sirp`, beside the diagnostics: the words, the broken hunks. */
 export interface Highlights {
   /** `# note` … `# end`: the author's comment, never read by the matcher */
   readonly notes: readonly LineSpan[];

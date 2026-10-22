@@ -12,15 +12,15 @@ export function describePairReason(reason: PairReason | undefined): string {
     case 'outside-out':
       return 'this patch is not inside the patch tree generate.out names';
     case 'not-a-patch-name':
-      return 'this name does not follow <file>.hatch, so it names no file';
+      return 'this name does not follow <file>.sirp, so it names no file';
     case 'unsafe-target':
       return 'the Target header points outside its root, and is not followed';
     case 'two-patches':
       return 'this file has two patches — one in the patch tree and one beside it; keep one';
     case 'newer-format':
-      return 'this patch is of a newer format than this hatch reads — update hatch';
+      return 'this patch is of a newer format than this sir reads — update sir';
     case 'older-format':
-      return 'this patch is of a format this hatch no longer reads — regenerate it';
+      return 'this patch is of a format this sir no longer reads — regenerate it';
     case 'bad-header':
       return 'the header of this patch does not read: every line before the first blank one must be Name: value';
     case undefined:

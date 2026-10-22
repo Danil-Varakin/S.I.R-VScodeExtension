@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { basename } from 'node:path';
-import type { HatchService } from '../service/client.ts';
-import type { ConfigResult, OverridesParams, PairResult } from '../service/protocol.ts';
+import type { SirService } from '../service/client.ts';
+import type { ConfigResultV5, OverridesParams, PairResult } from '../service/protocol.ts';
 import type { Log } from '../ui/log.ts';
 import { DiskWatch } from '../disk-watch.ts';
 import { LruMap } from '../lru.ts';
@@ -10,10 +10,10 @@ import { hashOf } from '../hash.ts';
 
 /** Answers kept per file; plenty for the files and patches open at once. */
 const MAX_CONFIGS = 64;
-/** Pairs of unsaved `.hatch` texts are kept per text; this many is plenty for open tabs. */
+/** Pairs of unsaved `.sirp` texts are kept per text; this many is plenty for open tabs. */
 const MAX_PAIRS = 64;
 
-const CONFIG_NAME = 'hatch.config.json';
+const CONFIG_NAME = 'sir.config.json';
 
 /**
  * What the core says about a file's project — the settings `generate` would apply, the
@@ -23,9 +23,9 @@ const CONFIG_NAME = 'hatch.config.json';
  * `watch` changes, or the editor settings do.
  */
 export class Project implements vscode.Disposable {
-  private readonly service: HatchService;
+  private readonly service: SirService;
   private readonly log: Log;
-  private readonly configs = new LruMap<string, Promise<ConfigResult>>(MAX_CONFIGS);
+  private readonly configs = new LruMap<string, Promise<ConfigResultV5>>(MAX_CONFIGS);
   private readonly pairs = new LruMap<string, Promise<PairResult>>(MAX_PAIRS);
   /** What the config watcher does not cover: git refs, config files outside the workspace. */
   private readonly watched = new Set<string>();
@@ -35,7 +35,7 @@ export class Project implements vscode.Disposable {
   /** Fires when an answer may have changed: a config file, HEAD, a ref, or a setting. */
   readonly onDidChange: vscode.Event<void> = this.changes.event;
 
-  constructor(service: HatchService, log: Log) {
+  constructor(service: SirService, log: Log) {
     this.service = service;
     this.log = log;
     this.disk = new DiskWatch((uri) => this.moved(uri));
@@ -51,7 +51,7 @@ export class Project implements vscode.Disposable {
   }
 
   /** The core's `config` for this file, with the editor settings as overrides. */
-  config(uri: vscode.Uri): Promise<ConfigResult> {
+  config(uri: vscode.Uri): Promise<ConfigResultV5> {
     return this.cached(this.configs, uri.fsPath, async () => {
       const result = await this.service.request('config', { path: uri.fsPath, overrides: overridesOf(uri) });
       this.watch(result.watch);
@@ -59,7 +59,7 @@ export class Project implements vscode.Disposable {
     });
   }
 
-  /** The core's `pair`. For a `.hatch`, its text as the editor has it: the marker may be unsaved. */
+  /** The core's `pair`. For a `.sirp`, its text as the editor has it: the marker may be unsaved. */
   pair(uri: vscode.Uri, mdText?: string): Promise<PairResult> {
     const key = mdText === undefined ? uri.fsPath : `${uri.fsPath}\0${hashOf(mdText)}`;
     return this.cached(this.pairs, key, () =>
@@ -119,11 +119,11 @@ export class Project implements vscode.Disposable {
   }
 }
 
-/** `hatch.base.eol` for this file, if set: pass it to `effectiveBase`. */
+/** `sir.base.eol` for this file, if set: pass it to `effectiveBase`. */
 export function chosenEolOf(uri: vscode.Uri): ReturnType<typeof chosenEol> {
-  return chosenEol(vscode.workspace.getConfiguration('hatch', uri));
+  return chosenEol(vscode.workspace.getConfiguration('sir', uri));
 }
 
 function overridesOf(uri: vscode.Uri): OverridesParams {
-  return overridesParamsFrom(vscode.workspace.getConfiguration('hatch', uri), vscode.workspace.isTrusted);
+  return overridesParamsFrom(vscode.workspace.getConfiguration('sir', uri), vscode.workspace.isTrusted);
 }

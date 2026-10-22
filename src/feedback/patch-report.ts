@@ -1,6 +1,6 @@
 import type { HunkLink } from '../service/protocol.ts';
 
-// The Hatch Patches panel (R2): every patch of the project against one revision of its
+// The Sir Patches panel (R2): every patch of the project against one revision of its
 // base. Pure — what a patch's answer means, the totals, the report — so it is tested alone.
 
 export type PatchStatus =
@@ -84,7 +84,7 @@ export function describeCheck(check: PatchCheck): string {
 
 /** Markdown, for an issue or a chat: the revision, the totals, then every patch that needs a look. */
 export function reportOf(revision: string, checks: readonly PatchCheck[]): string {
-  const lines = [`# Hatch patches against ${revision}`, '', describeTotals(totalsOf(checks)), ''];
+  const lines = [`# S.I.R patches against ${revision}`, '', describeTotals(totalsOf(checks)), ''];
   const attention = sorted(checks).filter((c) => c.status !== 'ok');
   if (attention.length === 0) lines.push('Every patch applies.');
   for (const check of attention) lines.push(`- ${ICON[check.status]} \`${check.patch}\` — ${describeCheck(check)}`);

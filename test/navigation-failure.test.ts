@@ -61,3 +61,37 @@ test('summaries count hunks from one, and flag the dependent ones', () => {
   assert.match(summarise(hunk({ index: 1, dependsOnEarlier: true })), /depends on an earlier hunk/);
   assert.match(summarise(hunk({ index: 0, status: 'no-match', failure: BROKEN })), /^hunk 1: /);
 });
+
+// ---- what mutation testing found unchecked (docs/15-test-plan.md, stage 4c) ----
+
+test('the parts of a failure are joined in one sentence', () => {
+  assert.equal(
+    describeFailure(BROKEN, 'no-match'),
+    'the pattern did not fit — stopped at step 3 of 5 — looking for "if (enabled) {"',
+  );
+});
+
+test('a failure with nothing more to say is its message alone', () => {
+  assert.equal(describeFailure({ kind: 'MatchError', message: 'no match' }, 'no-match'), 'no match');
+  assert.equal(describeFailure({ kind: 'AmbiguityError', message: 'fits more than one place' }, 'ambiguous'), 'fits more than one place');
+});
+
+test('a step without a total is counted alone', () => {
+  assert.equal(describeFailure({ kind: 'MatchError', message: 'm', failedStepIndex: 2 }, 'no-match'), 'm — stopped at step 3');
+});
+
+test('an anchor is quoted on one line, its runs of space made one, its edges trimmed', () => {
+  const text = describeFailure({ kind: 'MatchError', message: 'm', anchorText: '  if (a)   {\n\tb();\n' }, 'no-match');
+  assert.equal(text, 'm — looking for "if (a) { b();"');
+});
+
+test('an anchor of sixty characters is quoted whole; one more and it is clipped', () => {
+  const at = (n: number): string => describeFailure({ kind: 'MatchError', message: 'm', anchorText: 'x'.repeat(n) }, 'no-match');
+  assert.equal(at(60), `m — looking for "${'x'.repeat(60)}"`);
+  assert.equal(at(61), `m — looking for "${'x'.repeat(60)}…"`);
+});
+
+test('a summary of a broken hunk says what broke', () => {
+  assert.equal(summarise(hunk({ status: 'no-match', failure: BROKEN })), `hunk 1: ${describeFailure(BROKEN, 'no-match')}`);
+  assert.equal(summarise(hunk({ index: 2, status: 'error' })), 'hunk 3: error');
+});

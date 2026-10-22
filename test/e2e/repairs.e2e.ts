@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { GLYPH } from '../../src/feedback/verdict.ts';
 import { closeAll, file, generated, open, setText, waitFor, waitForLenses } from './helpers.ts';
 
-// The light bulb of a `.hatch` (R3, B8).
+// The light bulb of a `.sirp` (R3, B8).
 
 async function actionsAt(uri: vscode.Uri, line: number): Promise<vscode.CodeAction[]> {
   const range = new vscode.Range(line, 0, line, 0);
@@ -22,7 +22,7 @@ suite('light bulb', () => {
 
     const line = editor.document.getText().split('\n').findIndex((l) => l.startsWith('# match'));
     const actions = await waitFor('the bulb', async () => {
-      const found = (await actionsAt(patch, line)).filter((a) => a.command?.command === 'hatch.repair');
+      const found = (await actionsAt(patch, line)).filter((a) => a.command?.command === 'sir.repair');
       return found.length > 0 ? found : undefined;
     });
     assert.deepEqual(actions.map((a) => a.title), ['Show How Far It Got', 'Regenerate Patch']);
@@ -31,7 +31,7 @@ suite('light bulb', () => {
 
     const command = actions[0]!.command!;
     await vscode.commands.executeCommand(command.command, ...(command.arguments ?? []));
-    await waitFor('the base open', () => vscode.window.visibleTextEditors.some((e) => e.document.uri.scheme === 'hatch-baseline'));
+    await waitFor('the base open', () => vscode.window.visibleTextEditors.some((e) => e.document.uri.scheme === 'sir-baseline'));
   });
 
   test('a hunk that lands offers nothing', async () => {
@@ -39,7 +39,7 @@ suite('light bulb', () => {
     const editor = await open(patch, vscode.ViewColumn.Two);
     await waitForLenses(patch, (t) => t.length > 0, 'the patch resolved');
     const line = editor.document.getText().split('\n').findIndex((l) => l.startsWith('# match'));
-    const actions = (await actionsAt(patch, line)).filter((a) => a.command?.command === 'hatch.repair');
+    const actions = (await actionsAt(patch, line)).filter((a) => a.command?.command === 'sir.repair');
     assert.deepEqual(actions, []);
   });
 });

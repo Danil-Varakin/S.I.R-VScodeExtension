@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 /**
- * The three states every Hatch command has to tell apart. Callers differ in what
+ * The three states every Sir command has to tell apart. Callers differ in what
  * they do about them — generate reports the scheme, the status bar just hides —
  * so the decision stays with them and only the test lives here.
  */

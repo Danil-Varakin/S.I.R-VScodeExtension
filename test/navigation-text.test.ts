@@ -57,3 +57,9 @@ test('a line table answers the same as a split, line by line, on a long text', (
   }
   assert.equal(lines.lineCount, 500);
 });
+
+// ---- what mutation testing found unchecked (docs/15-test-plan.md, stage 4c) ----
+
+test('a line past the end of the text has no length', () => {
+  assert.equal(new LineMap(TEXT).lineLength(99), 0);
+});

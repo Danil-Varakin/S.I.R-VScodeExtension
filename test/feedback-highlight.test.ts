@@ -54,3 +54,12 @@ test('a hunk the code no longer holds is a warning', () => {
   const h = highlightsOf([hunk()], { targetText: 'other\n', baselineText: BASE });
   assert.deepEqual(h.warnings, [[3, 9]]);
 });
+
+// ---- what mutation testing found unchecked (docs/15-test-plan.md, stage 4c) ----
+
+test('a hunk with no place in the patch is marked nowhere, and the others still are', () => {
+  const nowhere = hunk({ status: 'no-match' });
+  delete (nowhere as { mdSpan?: unknown }).mdSpan;
+  const marked = highlightsOf([nowhere, hunk({ status: 'no-match' })], TEXTS);
+  assert.equal(marked.errors.length, 1);
+});

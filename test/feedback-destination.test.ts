@@ -16,7 +16,7 @@ import {
 // longer inside commands/generate.ts beside the dialogs that carry it.
 
 const place = (over: Partial<Place> = {}): Place => ({
-  patchPath: '/w/patches/a.cc.hatch',
+  patchPath: '/w/patches/a.cc.sirp',
   codeName: 'a.cc',
   exists: false,
   outTarget: null,
@@ -33,7 +33,7 @@ test('nothing at the place: nothing is asked', () => {
 test('an untrusted workspace is asked before a patch leaves it, whatever else is true', () => {
   const q = questionFor(place({ allowed: false, exists: true, notes: [1, 2] }));
   assert.match(q!.title, /not trusted/);
-  assert.match(q!.title, /\/w\/patches\/a\.cc\.hatch/);
+  assert.match(q!.title, /\/w\/patches\/a\.cc\.sirp/);
   assert.deepEqual(q!.buttons, [WRITE_THERE]);
   // the trust question comes first: nothing about notes or another file's patch is mixed in
   assert.doesNotMatch(q!.title, /already has a patch/);
@@ -78,4 +78,19 @@ test('every answer, and a dismissed modal, writes only what it says', () => {
   assert.equal(destinationOf(OPEN_EXISTING), 'open-existing');
   assert.equal(destinationOf(undefined), 'abandon');
   assert.equal(destinationOf('Something Else'), 'abandon');
+});
+
+// ---- what mutation testing found unchecked (docs/15-test-plan.md, stage 4c) ----
+
+test('the buttons read as README names them', () => {
+  assert.deepEqual([OVERWRITE, OPEN_EXISTING, REGENERATE, WRITE_THERE], ['Overwrite', 'Open Existing', 'Regenerate', 'Write There']);
+});
+
+test('a file there with no Target is not called another file\'s patch either', () => {
+  const q = questionFor(place({ exists: true, outTarget: null, ownTarget: 'src/a.cc', notes: [] }));
+  assert.match(q!.title, /already has a patch/);
+});
+
+test('leaving an untrusted workspace is asked as a question', () => {
+  assert.match(questionFor(place({ allowed: false }))!.detail ?? '', /\?$/);
 });

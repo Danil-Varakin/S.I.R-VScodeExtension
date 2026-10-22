@@ -26,7 +26,7 @@ interface Placed {
 }
 
 /**
- * From a line in the `.hatch` to its hunk. Prose and the gaps between hunks resolve to
+ * From a line in the `.sirp` to its hunk. Prose and the gaps between hunks resolve to
  * the nearest hunk BELOW, which is what reading order makes the expected one.
  */
 export function hunkAtMdLine(hunks: readonly HunkLink[], line: number): Hit {

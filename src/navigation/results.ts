@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { HatchService } from '../service/client.ts';
+import type { SirService } from '../service/client.ts';
 import type { PatchIndex, PatchIndexCache } from './patch-index.ts';
 import { LruMap } from '../lru.ts';
 import { keyOf } from '../hash.ts';
@@ -11,7 +11,7 @@ import { keyOf } from '../hash.ts';
  * here, never written anywhere. The patch is the query, so two patches of one file are
  * two documents, and the tab reads as the file it is the future of.
  */
-export const RESULT_SCHEME = 'hatch-result';
+export const RESULT_SCHEME = 'sir-result';
 
 /** Results of open diffs; a handful per open patch. */
 const MAX_TEXTS = 32;
@@ -49,7 +49,7 @@ export class PatchResults implements vscode.Disposable {
   private readonly subscriptions: readonly vscode.Disposable[];
 
   constructor(
-    private readonly service: HatchService,
+    private readonly service: SirService,
     cache: PatchIndexCache,
   ) {
     this.subscriptions = [
@@ -114,6 +114,6 @@ export class PatchResults implements vscode.Disposable {
 
 function unheld(uri: vscode.Uri): never {
   throw new Error(
-    `hatch: the result of ${patchOfResult(uri).fsPath} is no longer held; open it again with Hatch: Preview Patch`,
+    `sir: the result of ${patchOfResult(uri).fsPath} is no longer held; open it again with S.I.R: Preview Patch`,
   );
 }

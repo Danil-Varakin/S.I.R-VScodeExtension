@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { ResolveParams } from '../service/protocol.ts';
-import type { HatchService } from '../service/client.ts';
+import type { SirService } from '../service/client.ts';
 import type { Log } from './log.ts';
 import { EDITOR_EOL } from '../settings.ts';
 import { errorMessage } from '../errors.ts';
@@ -8,15 +8,27 @@ import { formatMs } from '../duration.ts';
 import { readLiveText, workspacePath } from '../workspace-fs.ts';
 import type { PatchCheck } from '../feedback/patch-report.ts';
 import { ICON, checkOf, describeCheck, describeTotals, failedCheck, reportOf, sorted, totalsOf } from '../feedback/patch-report.ts';
-import { PATCHES_GLOB } from '../patch-files.ts';
+import { PATCHES_EXCLUDE, PATCHES_GLOB } from '../patch-files.ts';
+import type { Problem } from '../feedback/verdict.ts';
+import { unresolvedProblems } from '../feedback/verdict.ts';
+import type { PatchState } from '../feedback/applied.ts';
+import { patchStateOf } from '../feedback/applied.ts';
+import type { ResolveResultMessage } from '../service/protocol.ts';
 
-// The Hatch Patches panel (R2): every `.hatch` of the workspace, checked against one revision
-// of its base — the project's own, or a branch, tag or commit picked for the run, the way
-// one checks a set of patches against a new upstream before moving to it. Every answer is
-// the core's `resolve` of the patch by its own path; nothing is written.
+/** What a run against the project base found of one patch, for Problems and the badges. */
+export interface PatchVerdict {
+  readonly problems: readonly Problem[];
+  readonly state: PatchState | undefined;
+  readonly broken: boolean;
+}
 
-export const VIEW_ID = 'hatch.patches';
-const EXCLUDE = '**/node_modules/**';
+// The Sir Patches panel (R2): every `.sirp` of the workspace, checked against one revision
+// of its base. The command checks against the project's own; a branch, tag or commit — the
+// way one checks a set of patches against a new upstream before moving to it — is reached
+// only through `run` for now (docs/14-backlog.md, BL1). Every answer is the core's
+// `resolve` of the patch by its own path; nothing is written.
+
+export const VIEW_ID = 'sir.patches';
 
 /** Which old version the run checks against. */
 export type Revision =
@@ -52,8 +64,10 @@ export class PatchPanel implements vscode.TreeDataProvider<Item>, vscode.Disposa
   private readonly view: vscode.TreeView<Item>;
 
   constructor(
-    private readonly service: HatchService,
+    private readonly service: SirService,
     private readonly log: Log,
+    /** where a run against the project base says what it found, as the editor does */
+    private readonly publish: (uri: vscode.Uri, verdict: PatchVerdict) => void,
   ) {
     this.view = vscode.window.createTreeView(VIEW_ID, { treeDataProvider: this, showCollapseAll: false });
   }
@@ -72,17 +86,15 @@ export class PatchPanel implements vscode.TreeDataProvider<Item>, vscode.Disposa
     return element === undefined ? this.items : [];
   }
 
-  /** Hatch: Check All Patches — asks the revision, then checks every patch, with progress. */
+  /** Sir: Check All Patches — every patch against the project base, with progress. */
   async checkAll(): Promise<void> {
-    const revision = await pickRevision(this.revision);
-    if (revision === undefined) return;
-    await this.run(revision);
+    await this.run({ kind: 'project' });
   }
 
-  /** The same run without asking: what the end-to-end tests drive. */
+  /** A run against any revision: what the end-to-end tests drive. */
   async run(revision: Revision): Promise<readonly PatchCheck[]> {
     this.revision = revision;
-    const patches = (await vscode.workspace.findFiles(PATCHES_GLOB, EXCLUDE)).sort((a, b) => a.fsPath.localeCompare(b.fsPath));
+    const patches = (await vscode.workspace.findFiles(PATCHES_GLOB, PATCHES_EXCLUDE)).sort((a, b) => a.fsPath.localeCompare(b.fsPath));
     const label = describeRevision(revision);
     const started = Date.now();
     const checked: Item[] = [];
@@ -95,7 +107,7 @@ export class PatchPanel implements vscode.TreeDataProvider<Item>, vscode.Disposa
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Hatch: checking ${patches.length} patches against ${label}`,
+        title: `S.I.R: checking ${patches.length} patches against ${label}`,
         cancellable: true,
       },
       async (progress, token) => {
@@ -121,25 +133,25 @@ export class PatchPanel implements vscode.TreeDataProvider<Item>, vscode.Disposa
     return checks;
   }
 
-  /** Hatch: Copy Patch Report — Markdown, for an issue or a chat. */
+  /** Sir: Copy Patch Report — Markdown, for an issue or a chat. */
   async copyReport(): Promise<void> {
     if (this.revision === undefined) {
-      void vscode.window.showInformationMessage('hatch: check the patches first (Hatch: Check All Patches)');
+      void vscode.window.showInformationMessage('sir: check the patches first (S.I.R: Check All Patches)');
       return;
     }
     await vscode.env.clipboard.writeText(this.report());
-    void vscode.window.showInformationMessage('hatch: the patch report is on the clipboard');
+    void vscode.window.showInformationMessage('sir: the patch report is on the clipboard');
   }
 
   report(): string {
     return reportOf(describeRevision(this.revision ?? { kind: 'project' }), this.items.map((i) => i.check));
   }
 
-  /** Hatch: Open Failed Patches — every patch that does not apply, each in its tab. */
+  /** Sir: Open Failed Patches — every patch that does not apply, each in its tab. */
   async openFailed(): Promise<void> {
     const failing = this.items.filter((i) => i.check.status === 'broken' || i.check.status === 'failed');
     if (failing.length === 0) {
-      void vscode.window.showInformationMessage('hatch: no patch failed the last check');
+      void vscode.window.showInformationMessage('sir: no patch failed the last check');
       return;
     }
     for (const { uri } of failing) {
@@ -158,32 +170,39 @@ export class PatchPanel implements vscode.TreeDataProvider<Item>, vscode.Disposa
       // the editor's text when the patch is open with edits: what the user sees is checked
       const patch = await readLiveText(uri);
       const answer = await this.service.request('resolve', { path: uri.fsPath, patch, ...baseParams(revision) });
+      // only a run against the project base: it is the base the editor checks against, so
+      // its answer and the editor's are the same answer. One against a branch would mark a
+      // patch that applies where it lives as broken, and nothing would take that back.
+      if (revision.kind === 'project') {
+        this.publish(uri, {
+          problems: unresolvedProblems(answer.hunks),
+          state: await stateOf(answer),
+          broken: answer.hunks.some((h) => h.status !== 'ok'),
+        });
+      }
       return checkOf(name, answer.hunks);
     } catch (e) {
+      if (revision.kind === 'project') {
+        this.publish(uri, { problems: [{ line: 1, message: errorMessage(e), severity: 'error' }], state: undefined, broken: true });
+      }
       return failedCheck(name, errorMessage(e));
     }
   }
 }
 
-async function pickRevision(last: Revision | undefined): Promise<Revision | undefined> {
-  // `revision`, not `kind`: QuickPickItem has a `kind` of its own (separator or item)
-  type Pick = vscode.QuickPickItem & { readonly revision: Revision['kind'] };
-  const items: Pick[] = [
-    { label: 'Project base', description: 'generate.base of each patch\'s config', revision: 'project' },
-    { label: 'Branch or tag…', description: 'origin/main, v150.0', revision: 'branch' },
-    { label: 'Commit…', revision: 'commit' },
-  ];
-  const picked = await vscode.window.showQuickPick(items, {
-    title: 'Check every patch against',
-    ...(last === undefined ? {} : { placeHolder: `last: ${describeRevision(last)}` }),
+/**
+ * Whether the patch is in its code, from `resolve` alone: the code as the editor holds it
+ * against the base the core read. With no `baseText` the base was the saved file, which
+ * the code on disk is.
+ */
+async function stateOf(answer: ResolveResultMessage): Promise<PatchState | undefined> {
+  if (answer.code === null) return undefined;
+  const targetText = await readLiveText(vscode.Uri.file(answer.code)).catch(() => undefined);
+  if (targetText === undefined) return undefined;
+  const git = answer.baseText !== undefined;
+  return patchStateOf(answer.hunks, {
+    targetText,
+    baselineText: answer.baseText ?? targetText,
+    base: { kind: git ? 'git' : 'saved' },
   });
-  if (picked === undefined) return undefined;
-  if (picked.revision === 'project') return { kind: 'project' };
-  const name = await vscode.window.showInputBox({
-    title: picked.revision === 'branch' ? 'Branch or tag' : 'Commit',
-    value: last !== undefined && last.kind !== 'project' && last.kind === picked.revision ? last.name : '',
-    validateInput: (v) => (v.trim() === '' ? 'name a revision' : v.startsWith('-') ? 'a revision does not start with -' : undefined),
-  });
-  const trimmed = name?.trim();
-  return trimmed === undefined || trimmed === '' ? undefined : { kind: picked.revision, name: trimmed };
 }

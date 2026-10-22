@@ -3,7 +3,7 @@
 // pointed at the installed files instead of this working tree.
 //
 // It is the only machine check that the package itself holds together — the bundle, the
-// manifest's own files, the core at `node_modules/hatch` and the grammars inside it, with
+// manifest's own files, the core at `node_modules/sir` and the grammars inside it, with
 // nothing downloaded. `npm run package` checks the listing; this one runs it.
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
@@ -30,7 +30,7 @@ rmSync(profile, { recursive: true, force: true });
 mkdirSync(profile, { recursive: true });
 const extensions = join(profile, 'extensions');
 // the same short directory the tests themselves use, where one is named (.vscode-test.mjs)
-const userData = process.env.HATCH_TEST_USER_DATA ?? join(profile, 'user-data');
+const userData = process.env.SIR_TEST_USER_DATA ?? join(profile, 'user-data');
 
 const editor = await downloadAndUnzipVSCode('stable');
 const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(editor);
@@ -67,8 +67,8 @@ const tests = spawnSync(join(root, 'node_modules', '.bin', 'vscode-test'), [], {
   shell: windows,
   env: {
     ...process.env,
-    HATCH_PACKAGED_DIR: extension,
-    HATCH_PACKAGED_FILES: `.vscode-test/packaged/extensions/${installed[0]}/out/e2e/*.e2e.cjs`,
+    SIR_PACKAGED_DIR: extension,
+    SIR_PACKAGED_FILES: `.vscode-test/packaged/extensions/${installed[0]}/out/e2e/*.e2e.cjs`,
   },
 });
 process.exit(tests.status ?? 1);

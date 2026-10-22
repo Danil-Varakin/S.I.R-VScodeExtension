@@ -12,14 +12,21 @@
  * clauses), which is the one other copy, as for the commands.
  */
 
-/** Patches are `.hatch` — the core refuses any other name. */
-export const PATCH_SUFFIX = '.hatch';
+/** Patches are `.sirp` — the core refuses any other name. */
+export const PATCH_SUFFIX = '.sirp';
 
 /** The `languages` contribution of `package.json`. */
-export const PATCH_LANGUAGE = 'hatch';
+export const PATCH_LANGUAGE = 'sir';
 
 /** Every patch of the workspace, for `findFiles` and for a `DocumentSelector`. */
 export const PATCHES_GLOB = `**/*${PATCH_SUFFIX}`;
+
+/** The `Sir:` of a patch started by hand when the core gives no header (`config.header`
+ *  is null). Format 2 is the one sir 0.5 reads and writes (VERSIONING.md H1). */
+export const PATCH_FORMAT = 2;
+
+/** What a search for every patch of the workspace leaves out. */
+export const PATCHES_EXCLUDE = '**/node_modules/**';
 
 /** Whether a path names a patch. Said of the path, never of what the file holds. */
 export function isPatchPath(path: string): boolean {

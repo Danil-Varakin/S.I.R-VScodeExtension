@@ -26,7 +26,7 @@ const manifest = (
 ).contributes;
 
 test('every shortcut in the manifest is in keys.ts, and the other way round', () => {
-  const bound = new Map(manifest.keybindings.map((b) => [b.command.replace(/^hatch\./, ''), b]));
+  const bound = new Map(manifest.keybindings.map((b) => [b.command.replace(/^sir\./, ''), b]));
   assert.deepEqual([...bound.keys()].sort(), Object.keys(KEYS).sort());
   for (const [name, chord] of Object.entries(KEYS)) {
     assert.equal(bound.get(name)!.key, chord.key, `${name}: key`);
@@ -52,6 +52,11 @@ test('three keys at most, and no Shift on macOS: one hand, no ⌥⇧⌘O', () =>
   }
 });
 
+test('every modifier is known as one, in the order the chord spells it', () => {
+  // the two rules above read modifiersOf: a modifier it does not know would pass them unseen
+  assert.deepEqual(modifiersOf('ctrl+shift+alt+cmd+meta+win+g'), ['ctrl', 'shift', 'alt', 'cmd', 'meta', 'win']);
+});
+
 test('a chord names exactly one key besides its modifiers', () => {
   for (const [name, chord] of Object.entries(KEYS)) {
     for (const spelling of [chord.key, chord.mac]) {
@@ -64,8 +69,8 @@ test('a command without a chord is still reachable: the palette lists it', () =>
   // Generate Patch Against File… lost its ⌥⇧⌘G; it is a one-off (`--in-old`), and the
   // *Pick Old File* button offers it where a missing base makes it the answer
   const commands = new Set(manifest.commands.map((c) => c.command));
-  assert.ok(commands.has('hatch.generateAgainstFile'));
-  assert.ok(!manifest.keybindings.some((b) => b.command === 'hatch.generateAgainstFile'));
+  assert.ok(commands.has('sir.generateAgainstFile'));
+  assert.ok(!manifest.keybindings.some((b) => b.command === 'sir.generateAgainstFile'));
 });
 
 // ---- how a chord is written for a reader ----
@@ -80,6 +85,15 @@ test('elsewhere the chord is written the way the manifest spells it', () => {
   assert.equal(chordLabel(KEYS.toggle, false), 'Alt+O');
   assert.equal(chordLabel(KEYS.goToBaseline, false), 'Alt+B');
   assert.equal(chordLabel(KEYS.generate, false), 'Alt+G');
+});
+
+test('a key longer than one letter is written with a capital, not in capitals', () => {
+  assert.equal(chordLabel({ key: 'alt+enter', mac: 'cmd+alt+enter' }, false), 'Alt+Enter');
+  assert.equal(chordLabel({ key: 'ctrl+f5', mac: 'cmd+f5' }, false), 'Ctrl+F5');
+});
+
+test('a message names the chord of the machine it is shown on', () => {
+  assert.equal(keyLabel('toggle'), chordLabel(KEYS.toggle, process.platform === 'darwin'));
 });
 
 test('a sentence shown to a macOS reader names a chord that macOS can press', () => {

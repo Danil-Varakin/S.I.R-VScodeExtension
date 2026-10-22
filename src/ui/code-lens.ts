@@ -3,12 +3,14 @@ import { basename } from 'node:path';
 import type { IndexState, PatchIndex, PatchIndexCache } from '../navigation/patch-index.ts';
 import { COMMANDS } from '../commands/ids.ts';
 import { viewOf } from '../feedback/state.ts';
-import { GLYPH, NOTHING_TO_CHECK, isNothingToCheck, lensTitle, verdictOf } from '../feedback/verdict.ts';
+import { GLYPH, isNothingToCheck, lensTitle, verdictOf } from '../feedback/verdict.ts';
 import { summarise } from '../navigation/failure.ts';
 import { isPatch } from '../navigation/place.ts';
 import type { Project } from '../project/project.ts';
 import { workspacePath } from '../workspace-fs.ts';
 import { PATCHES_GLOB } from '../patch-files.ts';
+import { patchStateOf } from '../feedback/applied.ts';
+import { keyLabel } from '../keys.ts';
 
 const PATCHES: vscode.DocumentSelector = { scheme: 'file', pattern: PATCHES_GLOB };
 
@@ -40,14 +42,13 @@ function lensesFor(mdUri: vscode.Uri, state: IndexState): vscode.CodeLens[] {
 }
 
 function hunkLenses(index: PatchIndex): vscode.CodeLens[] {
+  // whether the patch is in the code is said once, after the header (ui/highlight.ts);
+  // with nothing to check that is all there is to say: the base is the very file, and a
+  // dot per hunk — green or, as often, red for an anchor the saved file has lost — would
+  // say something about it that cannot be told
+  if (isNothingToCheck(index)) return [];
   const target = workspacePath(index.targetUri);
-  if (isNothingToCheck(index)) {
-    // one sentence for the whole patch: it is about the base, not about any hunk
-    const first = index.hunks.find((h) => h.mdSpan !== undefined)?.mdSpan?.[0] ?? 1;
-    const title = NOTHING_TO_CHECK(target);
-    return [lens(index.mdUri, first, title, title)];
-  }
-  const out: vscode.CodeLens[] = [];
+  const out: vscode.CodeLens[] = applyLenses(index, target);
   for (const hunk of index.hunks) {
     const line = hunk.mdSpan?.[0];
     if (line === undefined) continue;
@@ -55,6 +56,32 @@ function hunkLenses(index: PatchIndex): vscode.CodeLens[] {
     out.push(lens(index.mdUri, line, title, summarise(hunk)));
   }
   return out;
+}
+
+/**
+ * «▶ Apply to a.cc · 2 hunks | Preview» above the header — only when Apply would just
+ * write: the code is its git base and every hunk lands. Anything else Apply would have to
+ * ask about, and a lens that opens with a question is not the shortcut it looks like.
+ */
+function applyLenses(index: PatchIndex, target: string): vscode.CodeLens[] {
+  if (index.base.kind !== 'git' || patchStateOf(index.hunks, index) !== 'not-applied') return [];
+  if (index.hunks.length === 0 || index.hunks.some((h) => h.status !== 'ok')) return [];
+  const top = new vscode.Range(0, 0, 0, 0);
+  const count = index.hunks.length === 1 ? '1 hunk' : `${index.hunks.length} hunks`;
+  return [
+    new vscode.CodeLens(top, {
+      title: `▶ Apply to ${target} · ${count}`,
+      tooltip: `Lay the patch on its base and put the result in ${target}, unsaved (${keyLabel('apply')})`,
+      command: COMMANDS.apply,
+      arguments: [index.mdUri],
+    }),
+    new vscode.CodeLens(top, {
+      title: 'Preview',
+      tooltip: 'The base beside the base with the patch',
+      command: COMMANDS.previewPatch,
+      arguments: [index.mdUri],
+    }),
+  ];
 }
 
 function lens(mdUri: vscode.Uri, line: number, title: string, tooltip: string): vscode.CodeLens {

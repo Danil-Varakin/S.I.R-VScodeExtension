@@ -32,7 +32,9 @@ test('a long text is keyed without overflowing into a negative number', () => {
   assert.notEqual(hashOf(big), hashOf(`${big}y`.slice(1)));
 });
 
-test('whole texts are keyed quickly enough to replace a request to the core', () => {
+// the clock only under SIR_PERF (CI, `npm run test:perf`): a loaded machine is no measure,
+// and under Stryker the instrumented loop of `hashOf` is many times slower than the real one
+test('whole texts are keyed quickly enough to replace a request to the core', { skip: process.env['SIR_PERF'] !== '1' }, () => {
   // the measured alternative was 46 ms (1 900 lines) to 248 ms (10 800) of `apply`
   const patch = 'y'.repeat(150_000);
   const base = 'z'.repeat(150_000);
@@ -40,4 +42,14 @@ test('whole texts are keyed quickly enough to replace a request to the core', ()
   for (let i = 0; i < 20; i += 1) keyOf(patch, base, '/w/a.cc');
   const each = (performance.now() - started) / 20;
   assert.ok(each < 20, `a key took ${each.toFixed(1)} ms`);
+});
+
+test('the hash is FNV-1a, as its comment says: the published vectors', () => {
+  assert.equal(hashOf(''), '0:811c9dc5');
+  assert.equal(hashOf('a'), '1:e40c292c');
+  assert.equal(hashOf('foobar'), '6:bf9cf968');
+});
+
+test('a key is its parts hashed and joined by a slash', () => {
+  assert.equal(keyOf('a', 'b'), `${hashOf('a')}/${hashOf('b')}`);
 });

@@ -36,6 +36,8 @@ jobs:
 
       - run: npm ci
       - run: npm run check
+        env:
+          SIR_PERF: '1'
 
       - name: VS Code for the end-to-end tests
         uses: actions/cache@v4
@@ -45,14 +47,14 @@ jobs:
       - run: xvfb-run -a dbus-run-session -- npm run test:e2e
         env:
           # the editor's profile, short: it holds a unix socket, and the checkout is deep
-          HATCH_TEST_USER_DATA: ${{ runner.temp }}/vsc
+          SIR_TEST_USER_DATA: ${{ runner.temp }}/vsc
 
       - run: npm run package
       - name: the suite against the installed package
         run: xvfb-run -a dbus-run-session -- npm run test:packaged
         env:
           # the editor's profile, short: it holds a unix socket, and the checkout is deep
-          HATCH_TEST_USER_DATA: ${{ runner.temp }}/vsc
+          SIR_TEST_USER_DATA: ${{ runner.temp }}/vsc
 
       - uses: softprops/action-gh-release@v2
         with:

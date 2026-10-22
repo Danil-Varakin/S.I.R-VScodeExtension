@@ -1,8 +1,84 @@
 # Changelog
 
-Every release names its four numbers — the extension's version, the hatch protocol range
-it speaks, the config schema its `hatch.*` settings mirror, the patch format its `.hatch`
-language colors — then what changed, breaking changes first. The rules behind the numbers are in [CONTRIBUTING.md](./CONTRIBUTING.md).
+Every release names its four numbers — the extension's version, the sir protocol range
+it speaks, the config schema its `sir.*` settings mirror, the patch format its `.sirp`
+language colors (until 0.1.0 the core was hatch, the settings `hatch.*`, the patches
+`.hatch`) — then what changed, breaking changes first. The rules behind the numbers are in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## 0.1.0 — 2026-10-22
+
+**Extension 0.1.0 · protocol 5–5 · config schema 3 · patch format 2 · VS Code 1.101+ · ships sir 0.5.0**
+
+### Breaking
+
+- **Hatch Patches is S.I.R Patches** — the core is renamed from hatch to sir (search,
+  insert, replace), and the extension with it; nothing of hatch is read:
+  - the extension is `sir-vscode` (was `hatch-vscode`), its repository
+    `Danil-Varakin/S.I.R-VScodeExtension`; the language of patches is `sir`, files `.sirp`
+    (a `.hatch` is plain text); the commands are `sir.*`, the palette category `S.I.R`;
+  - every setting `hatch.*` is `sir.*`, with the same path and meaning; the theme colours
+    `hatch.*` are `sir.*`;
+  - the project config is `sir.config.json`, schema 3; a `hatch.config.json` does not
+    activate the extension and is not read;
+  - it speaks protocol **5–5** and carries sir 0.5.0 inside: a core of protocol 4
+    (hatch 0.4.1) is refused with "update sir".
+  → uninstall Hatch Patches 0.0.1 and install `sir-vscode-0.1.0.vsix`.
+  → in `settings.json`: rename every `hatch.` key to `sir.`, theme colours included.
+  → in the project: rename `hatch.config.json` to `sir.config.json` with `"version": 3`,
+  and every `x.hatch` to `x.sirp` with its first line `Sir: 2` — or regenerate the patch.
+
+### Added
+
+- **Apply Patch** (`alt+A`, macOS `⌥⌘A`), from the patch or its code. The patch is applied
+  to its clean git base, and the result replaces the code in the editor, unsaved; one Undo
+  restores it.
+  - Code that already equals the result is left alone.
+  - Code with edits the patch does not contain is overwritten only after a question.
+  - A patch with a hunk that does not land, or with the saved file as base, is refused.
+  - Entry points: the lens `▶ Apply to … · N hunks | Preview` over the header of a patch
+    ready to apply, a button in the title bar of a patch, a button in the S.I.R Patches
+    panel.
+- **Apply All Patches**: every patch of the workspace by the same rules, with a summary and
+  the list of patches left alone. Up to 50 files through the Refactor Preview; above that,
+  on disk after a confirmation. A file is written only when its text changes.
+- **New S.I.R Patch**, from the context menu of a file of code in the Explorer or of its
+  tab, and from the palette. An unsaved patch opens at the place Generate Patch would
+  write it: the header and one hunk whose anchors are tab stops. A file that already has a
+  patch gets that patch opened.
+  - The header is the one Generate Patch would write (`Base-Blob`, `Sir-Version` and
+    `Grammar` included), and the word of `# match` is the core's (`cpp` for `.cc`).
+- **Generate Patch** in the context menu of a file of code in the Explorer and of its tab,
+  beside New S.I.R Patch. For a file that is not open, its text on disk is the new
+  version.
+- **Write by Hand** and **Continue Generate**. When synthesis cannot anchor a change, the
+  error offers a draft: every hunk that landed and one to write for that change. The lens
+  over the draft sends it back, and synthesis continues from it, round after round, until
+  the patch is written. A hunk of the draft that does not land is marked on its line.
+  Uses `detail.draft` and `generate.keep` of protocol 5.
+
+### Changed
+
+- **Check All Patches** checks against the project base at once and asks for no revision.
+- **Check All Patches** puts every patch that does not apply into Problems, so the
+  Explorer marks it without opening it first.
+- The findings of a check remain in **Problems**, and the patch remains red in the
+  Explorer, after its tab is closed — until the patch is opened again, Check All runs, or
+  the file is removed.
+- Whether a patch is in its code is stated once: a coloured label after the header —
+  `✓ applied`, `○ not applied — the code is its base`, `⚠ the code changed since the
+  patch`, `◌ nothing to check` — and a badge on its name in the Explorer and on its tab
+  (`✓`, `○`, `≠`). A closed patch keeps the badge once it was open or Check All ran.
+- The lens of a hunk states only whether the hunk lands: `🟢`, `🟡` or `🔴` and where. The
+  white `⚪ not applied` on every hunk of a fresh checkout is removed; with nothing to check
+  there are no hunk lenses, only the label.
+- Six new theme colours: `sir.appliedPatch*`, `sir.notAppliedPatch*`,
+  `sir.changedPatch*` (foreground and background each).
+- **Go to What the Hunk Replaces** marks the hunk in the diff instead of selecting it: its
+  lines are framed on both sides, with `◀ hunk N of M` after the first line and a mark on
+  the scrollbar. An insertion is a line between two lines in the base, no longer its
+  neighbouring line selected as if it were replaced. The mark stays until the diff closes
+  or the patch changes. Two new theme colours: `sir.selectedHunkForeground`,
+  `sir.selectedHunkBackground`.
 
 ## 0.0.1 — 2026-10-06
 

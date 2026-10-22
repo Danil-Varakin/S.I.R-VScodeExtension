@@ -15,6 +15,17 @@ test('a file is supported by its extension, case aside; none is not supported', 
 });
 
 test('the refusal names the extension and what the core does know', () => {
-  assert.match(unsupportedMessage('/w/BUILD.gn', '0.4.0', ['cpp', 'c']), /^hatch 0\.4\.0 has no grammar for \.gn files \(it knows cpp, c\)/);
+  assert.match(unsupportedMessage('/w/BUILD.gn', '0.4.0', ['cpp', 'c']), /^sir 0\.4\.0 has no grammar for \.gn files \(it knows cpp, c\)/);
   assert.match(unsupportedMessage('/w/Makefile', '0.4.0', ['cpp']), /files without an extension/);
+});
+
+// ---- what mutation testing found unchecked (docs/15-test-plan.md, stage 4c) ----
+
+test('the refusal lists up to twelve languages, and says when there are more', () => {
+  const names = (n: number): string[] => Array.from({ length: n }, (_, i) => `l${i}`);
+  const twelve = unsupportedMessage('/w/x.gn', '0.4.0', names(12));
+  assert.match(twelve, /\(it knows l0, .*, l11\);/);
+  const thirteen = unsupportedMessage('/w/x.gn', '0.4.0', names(13));
+  assert.match(thirteen, /\(it knows l0, .*, l11, …\);/);
+  assert.doesNotMatch(thirteen, /l12/);
 });

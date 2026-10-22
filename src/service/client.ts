@@ -13,7 +13,7 @@ import type {
 import { SUPPORTED_PROTOCOL, describeRange, isProgress } from './protocol.ts';
 import { ServiceProcess } from './process.ts';
 import {
-  HatchServiceError,
+  SirServiceError,
   ProtocolMismatchError,
   RequestCancelledError,
   RequestTimeoutError,
@@ -83,7 +83,7 @@ interface Pending {
  * it — one without `cancel`, or a change that does not finish in time — is restarted,
  * and then everything else in flight is told the truth: the service went away under it.
  */
-export class HatchService implements Disposable {
+export class SirService implements Disposable {
   private readonly process: ServiceProcess;
   private readonly log: Log;
   private readonly cancelGraceMs: number;
@@ -113,7 +113,7 @@ export class HatchService implements Disposable {
     params: ParamsOf<M>,
     options: RequestOptions = {},
   ): Promise<ResultOf<M>> {
-    if (this.disposed) throw new ServiceGoneError('hatch service is disposed');
+    if (this.disposed) throw new ServiceGoneError('sir service is disposed');
     if (!BEFORE_HANDSHAKE.has(method)) await this.ensureCompatible();
     return this.send(method, params, options);
   }
@@ -122,7 +122,7 @@ export class HatchService implements Disposable {
     const asked = (this.versionRequest ??= this.send('version', undefined, {}).then((version) => {
       const served = describeRange(servedRange(version));
       const ours = describeRange(SUPPORTED_PROTOCOL);
-      this.log.info(`hatch ${version.hatch} serves protocol ${served}, this extension speaks ${ours}`);
+      this.log.info(`sir ${version.sir} serves protocol ${served}, this extension speaks ${ours}`);
       return version;
     }));
     try {
@@ -148,7 +148,7 @@ export class HatchService implements Disposable {
   }
 
   private send<M extends Method>(method: M, params: ParamsOf<M>, options: RequestOptions): Promise<ResultOf<M>> {
-    if (this.disposed) return Promise.reject(new ServiceGoneError('hatch service is disposed'));
+    if (this.disposed) return Promise.reject(new ServiceGoneError('sir service is disposed'));
 
     // before any state is touched, so a missing service leaves nothing half-registered
     try {
@@ -182,7 +182,7 @@ export class HatchService implements Disposable {
         cleanup,
         settle: (response) => {
           if (response.ok) resolve(response.result as ResultOf<M>);
-          else reject(new HatchServiceError(response.error));
+          else reject(new SirServiceError(response.error));
         },
         fail: reject,
       });
@@ -341,7 +341,7 @@ export function servedRange(version: VersionResult): ProtocolRange {
 export function protocolProblem(version: VersionResult): ProtocolMismatchError | null {
   const served = servedRange(version);
   const overlap = SUPPORTED_PROTOCOL.min <= served.max && served.min <= SUPPORTED_PROTOCOL.max;
-  return overlap ? null : new ProtocolMismatchError(SUPPORTED_PROTOCOL, served, version.hatch);
+  return overlap ? null : new ProtocolMismatchError(SUPPORTED_PROTOCOL, served, version.sir);
 }
 
 /** Nothing newer than this may be sent to, or expected from, this core (R8). */
@@ -350,5 +350,5 @@ export function workingProtocol(version: VersionResult): number {
 }
 
 export function serviceEntry(extensionPath: string): string {
-  return join(extensionPath, 'node_modules', 'hatch', 'dist', 'service', 'index.js');
+  return join(extensionPath, 'node_modules', 'sir', 'dist', 'service', 'index.js');
 }

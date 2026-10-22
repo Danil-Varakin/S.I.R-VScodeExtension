@@ -62,12 +62,12 @@ export function overridesFrom(section: WorkspaceConfiguration, trusted = true): 
 /**
  * The value only if a human put it there. `get` would hand back a default — the schema's,
  * or one another extension contributes through `configurationDefaults` — and that would
- * drown `hatch.config.json` in settings nobody chose. `null` is the schema's way of
+ * drown `sir.config.json` in settings nobody chose. `null` is the schema's way of
  * spelling "unset", so it counts as absent too.
  *
  * The levels are read in the editor's own order, the narrowest first, and the first level
  * that sets the key decides — `null` included: a workspace that sets `null` hands the
- * choice back to the config over whatever the user set. The `hatch.*` settings are
+ * choice back to the config over whatever the user set. The `sir.*` settings are
  * `resource`-scoped, not `language-overridable`, so there are no language values.
  */
 export function explicit<T>(section: WorkspaceConfiguration, key: string, trusted = true): T | undefined {
@@ -97,7 +97,7 @@ export type BaseChoice =
   | { readonly kind: 'unset' };
 
 /**
- * `hatch.base.*`, read as the CLI reads `--head`/`--branch`/`--commit`: any of the three
+ * `sir.base.*`, read as the CLI reads `--head`/`--branch`/`--commit`: any of the three
  * set names the base whole and replaces the config's `generate.base`. `head: false`
  * alone is a choice too — the saved file, whatever the config says.
  */
@@ -117,13 +117,13 @@ export function baseFrom(section: WorkspaceConfiguration): BaseChoice {
   return head === false ? { kind: 'saved' } : { kind: 'unset' };
 }
 
-/** `hatch.base.eol` if a human set it. It reaches the core inside `baseGit` (project/base.ts):
+/** `sir.base.eol` if a human set it. It reaches the core inside `baseGit` (project/base.ts):
  *  protocol 4 has no way to send the endings alone without naming the base whole. */
 export function chosenEol(section: WorkspaceConfiguration): GitSourceParams['eol'] {
   return explicit<'repository' | 'worktree'>(section, 'base.eol');
 }
 
-/** A git base in the editor, unless `hatch.base.eol` or the config says otherwise: the
+/** A git base in the editor, unless `sir.base.eol` or the config says otherwise: the
  *  buffer is compared as it is on disk, so under `core.autocrlf` the old version must
  *  carry CRLF too, or every line reads as changed. The CLI keeps `repository`. The
  *  exception to E1 is written down, with this reason, in CONTRIBUTING.md. */

@@ -48,7 +48,7 @@ export class ServiceProcess {
       env: {
         ...process.env,
         ELECTRON_RUN_AS_NODE: '1',
-        ...(this.grammarDir !== undefined ? { HATCH_GRAMMAR_DIR: this.grammarDir } : {}),
+        ...(this.grammarDir !== undefined ? { SIR_GRAMMAR_DIR: this.grammarDir } : {}),
       },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -75,7 +75,7 @@ export class ServiceProcess {
 
   send(line: string): void {
     const child = this.child;
-    if (child === null) throw new Error('hatch service is not running');
+    if (child === null) throw new Error('sir service is not running');
     this.log.protocol('→', line);
     child.stdin.write(`${line}\n`);
   }

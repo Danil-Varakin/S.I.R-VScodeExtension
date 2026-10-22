@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
 import { PATCH_LANGUAGE } from '../patch-files.ts';
 
-// Quiet until there is hatch here (C1). Before the gate opens nothing asks the core — no
-// `config` for the status bar of every file of code — so a workspace without hatch never
+// Quiet until there is sir here (C1). Before the gate opens nothing asks the core — no
+// `config` for the status bar of every file of code — so a workspace without sir never
 // starts it. Any one of three facts opens it, for the rest of the session:
 
 interface GateFacts {
-  /** a hatch.config.json somewhere in the workspace */
+  /** a sir.config.json somewhere in the workspace */
   readonly config: boolean;
-  /** a `.hatch` document is open */
+  /** a `.sirp` document is open */
   readonly patch: boolean;
-  /** a Hatch command ran in this session */
+  /** a Sir command ran in this session */
   readonly command: boolean;
 }
 
@@ -18,8 +18,8 @@ function isGateOpen(facts: GateFacts): boolean {
   return facts.config || facts.patch || facts.command;
 }
 
-const CONTEXT_KEY = 'hatch.active';
-const CONFIG_GLOB = '**/hatch.config.json';
+const CONTEXT_KEY = 'sir.active';
+const CONFIG_GLOB = '**/sir.config.json';
 
 export class Gate implements vscode.Disposable {
   private facts: GateFacts = { config: false, patch: false, command: false };
@@ -48,7 +48,7 @@ export class Gate implements vscode.Disposable {
     return isGateOpen(this.facts);
   }
 
-  /** A Hatch command is about to run: whatever it asks of the core, the user asked for. */
+  /** A Sir command is about to run: whatever it asks of the core, the user asked for. */
   commandRan(): void {
     this.learn({ command: true });
   }

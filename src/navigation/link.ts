@@ -41,7 +41,7 @@ export async function targetFor(mdUri: vscode.Uri, mdText: string, project: Proj
 }
 
 /**
- * A `.hatch` is a patch when it names its file in `Target`, or when the file its name
+ * A `.sirp` is a patch when it names its file in `Target`, or when the file its name
  * points at is there; otherwise it is a patch whose code is gone, and gets no lenses.
  */
 export function isPatchLink(link: TargetLink): boolean {

@@ -1,7 +1,7 @@
 import type { HunkLink } from '../service/protocol.ts';
 import type { Verdict } from './verdict.ts';
 
-// What the light bulb offers on a hunk of a `.hatch` (R3, B8): the actions the
+// What the light bulb offers on a hunk of a `.sirp` (R3, B8): the actions the
 // notifications already had, where the eye already is. Pure — which actions for which
 // state — so it is tested alone; the editor glue is ui/code-actions.ts.
 

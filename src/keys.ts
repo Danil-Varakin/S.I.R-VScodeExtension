@@ -36,6 +36,7 @@ export const KEYS = {
   generate: { key: 'alt+g', mac: 'cmd+alt+g' },
   toggle: { key: 'alt+o', mac: 'cmd+alt+o' },
   goToBaseline: { key: 'alt+b', mac: 'cmd+alt+b' },
+  apply: { key: 'alt+a', mac: 'cmd+alt+a' },
 } as const satisfies Readonly<Record<string, Chord>>;
 
 export type KeyName = keyof typeof KEYS;

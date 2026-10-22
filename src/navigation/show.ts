@@ -5,7 +5,8 @@ import type { PatchResults } from './results.ts';
 import type { BaselineDocuments } from '../baseline/documents.ts';
 import type { PatchIndex } from './patch-index.ts';
 import { reveal } from '../ui/reveal.ts';
-import { trimmed } from './hunks.ts';
+import { focusMark } from './focus.ts';
+import type { FocusSide, HunkFocus } from '../ui/hunk-focus.ts';
 import { LineMap } from './text.ts';
 
 /**
@@ -50,14 +51,16 @@ export async function showBaselineOffset(
 
 /**
  * The diff «base ↔ base + patch» (B1): the left half is the base the index was resolved
- * against, the right half the core's `apply` of the patch to it — what `hatch-apply` would
- * write. With a hunk, its `base` is selected on the left and its `final` on the right,
- * each in its own editor: `vscode.diff` takes one selection, for the right side only.
- * A hunk that depends on an earlier one has no place in the base, only on the right.
+ * against, the right half the core's `apply` of the patch to it — what `sir-apply` would
+ * write. With a hunk, it is marked on both sides (B10): its `base` on the left, its `final`
+ * on the right, each in its own editor — `vscode.diff` takes one selection, for the right
+ * side only. A hunk that depends on an earlier one has no place in the base, only on the
+ * right. Without a hunk, a mark left by an earlier diff goes.
  */
 export async function openPatchDiff(
   baselines: BaselineDocuments,
   results: PatchResults,
+  focus: HunkFocus,
   index: PatchIndex,
   hunk?: HunkLink,
 ): Promise<void> {
@@ -74,24 +77,34 @@ export async function openPatchDiff(
     `${name} (${base}) ↔ ${name} (+ ${basename(index.mdUri.fsPath)})`,
     { preview: false },
   );
-  if (hunk === undefined) return;
-
-  if (hunk.base !== undefined && !hunk.dependsOnEarlier) {
-    selectIn(index.baselineUri, index.baselineText, hunk.base);
+  if (hunk === undefined) {
+    focus.clear();
+    return;
   }
-  if (hunk.final !== undefined) selectIn(result, resultText, hunk.final);
+
+  const which = `hunk ${hunk.index + 1} of ${index.hunks.length}`;
+  const sides: FocusSide[] = [];
+  if (hunk.base !== undefined && !hunk.dependsOnEarlier) {
+    const mark = focusMark(index.baselineText, hunk.base);
+    sides.push({ uri: index.baselineUri, mark, label: `◀ ${which} ${mark.kind === 'block' ? 'replaces this' : 'inserts here'}` });
+  }
+  if (hunk.final !== undefined) {
+    const mark = focusMark(resultText, hunk.final);
+    sides.push({ uri: result, mark, label: `◀ ${which}${mark.kind === 'block' ? '' : ' removed text here'}` });
+  }
+  focus.show(index.baselineUri, result, sides);
+  for (const side of sides) placeCursor(side);
 }
 
 /** One side of an open diff: its editor is found by its document, as the diff opened it. */
-function selectIn(uri: vscode.Uri, text: string, span: Span): void {
+function placeCursor({ uri, mark }: FocusSide): void {
   const key = uri.toString();
   const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.toString() === key);
   if (editor === undefined) return;
-  const lines = new LineMap(text);
-  const trimmedSpan = trimmed(text, span);
-  const range = new vscode.Range(positionIn(lines, trimmedSpan.start), positionIn(lines, trimmedSpan.end));
-  editor.selection = new vscode.Selection(range.start, range.end);
-  editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+  const at = new vscode.Position(mark.cursor.line, mark.cursor.character);
+  editor.selection = new vscode.Selection(at, at);
+  const shown = mark.kind === 'block' ? new vscode.Range(mark.first, 0, mark.last, 0) : new vscode.Range(at, at);
+  editor.revealRange(shown, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 }
 
 function positionIn(lines: LineMap, offset: number): vscode.Position {

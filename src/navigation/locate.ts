@@ -1,5 +1,5 @@
 import type * as vscode from 'vscode';
-import type { HatchDeps } from '../deps.ts';
+import type { SirDeps } from '../deps.ts';
 import type { LocateResult, PatchPoint } from './context.ts';
 import type { PatchIndex } from './patch-index.ts';
 import type { Place } from './place.ts';
@@ -8,13 +8,13 @@ import { hunkAtMdLine, hunkAtOffset } from './hunks.ts';
 import { patchFor } from './link.ts';
 import { placeOf } from './place.ts';
 
-type LocateDeps = Pick<HatchDeps, 'cache' | 'project'>;
+type LocateDeps = Pick<SirDeps, 'cache' | 'project'>;
 
 /**
  * Which hunk the cursor is on, whichever of the three sides it sits on.
  *
  * Both commands come through here. They used to carry a copy each, and the copies
- * had already begun to differ — one checked that the `.hatch` existed and the other did
+ * had already begun to differ — one checked that the `.sirp` existed and the other did
  * not. Everything a caller has to decide differently is in `Located.from`; nothing
  * else is duplicated. What to tell the user when there is no hunk is the caller's.
  */
@@ -42,7 +42,7 @@ export async function locate(editor: vscode.TextEditor, deps: LocateDeps): Promi
   };
 }
 
-export async function locateInPatch(at: PatchPoint, deps: Pick<HatchDeps, 'cache'>): Promise<LocateResult> {
+export async function locateInPatch(at: PatchPoint, deps: Pick<SirDeps, 'cache'>): Promise<LocateResult> {
   const state = await deps.cache.get(at.mdUri);
   if (state.kind !== 'ready') return { kind: 'unready', mdUri: at.mdUri, state };
 

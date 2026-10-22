@@ -136,7 +136,7 @@ test('Delete Patch is offered only for an orphan, whatever else the git base say
   for (const reason of reasons) {
     const offered = repairsForState('no-baseline', reason).some((a) => a.repair === 'delete-patch');
     assert.equal(offered, reason === 'no-such-file', String(reason));
-    const remedy = viewOf({ kind: 'no-baseline', path: '/w/a.cc', reason: 'core words', gitReason: reason }, 'a.cc.hatch').remedy;
+    const remedy = viewOf({ kind: 'no-baseline', path: '/w/a.cc', reason: 'core words', gitReason: reason }, 'a.cc.sirp').remedy;
     assert.equal(remedy === 'delete-patch', reason === 'no-such-file', String(reason));
   }
   for (const kind of ['parse-error', 'unlinked', 'no-target', 'failed']) {
@@ -151,17 +151,20 @@ test('every reason pair can give has words of its own (PROTOCOL.md: "The list is
     'two-patches', 'newer-format', 'older-format', 'bad-header'] as const;
   const fallback = describePairReason(undefined);
   const said = reasons.map((r) => describePairReason(r));
-  for (const [i, text] of said.entries()) assert.notEqual(text, fallback, reasons[i]);
+  for (const [i, text] of said.entries()) {
+    assert.notEqual(text, fallback, reasons[i]);
+    assert.ok(typeof text === 'string' && text.length > 20, `${reasons[i]}: a sentence, not ${JSON.stringify(text)}`);
+  }
   assert.equal(new Set(said).size, reasons.length, 'no two reasons share their words');
 });
 
 test('a patch whose file is missing names the path; a failed build points at the log', () => {
-  const missing = viewOf({ kind: 'no-target', path: '/w/src/gone.cc' }, 'gone.cc.hatch');
+  const missing = viewOf({ kind: 'no-target', path: '/w/src/gone.cc' }, 'gone.cc.sirp');
   assert.match(missing.message, /\/w\/src\/gone\.cc/);
-  const failed = viewOf({ kind: 'failed', message: 'the service went away', transient: true }, 'a.cc.hatch');
+  const failed = viewOf({ kind: 'failed', message: 'the service went away', transient: true }, 'a.cc.sirp');
   assert.equal(failed.remedy, 'show-log');
   assert.match(failed.message, /the service went away/);
-  const parse = viewOf({ kind: 'parse-error', mdLine: 5, message: 'line 5: no gutter' }, 'a.cc.hatch');
+  const parse = viewOf({ kind: 'parse-error', mdLine: 5, message: 'line 5: no gutter' }, 'a.cc.sirp');
   assert.equal(parse.remedy, 'show-parse-error');
 });
 
@@ -209,7 +212,7 @@ test('one verdict per hunk: the same hunk asked twice gives the same answer', ()
 });
 
 test('a hunk status of error lands nowhere: the panel counts it broken (R2, PROTOCOL status)', () => {
-  const check = checkOf('a.cc.hatch', [{ index: 0, status: 'error', dependsOnEarlier: false } as HunkLink]);
+  const check = checkOf('a.cc.sirp', [{ index: 0, status: 'error', dependsOnEarlier: false } as HunkLink]);
   assert.equal(check.status, 'broken');
   assert.equal(check.placed, 0);
 });
@@ -276,20 +279,86 @@ test('a huge buffer is still translated, and quickly', () => {
   const started = performance.now();
   const moved = translateByLines(applied, buffer, at);
   assert.equal(moved, buffer.indexOf('line 150000'));
-  assert.ok(performance.now() - started < 2_000);
+  // the clock only under SIR_PERF (CI, `npm run test:perf`): a loaded machine is no measure
+  if (process.env['SIR_PERF'] === '1') assert.ok(performance.now() - started < 2_000);
 });
 
 // ---- languages (D3, README "Generate Patch is offered on the files the core has a grammar for") ----
 
 test('a patch or a Markdown file is not a file to generate from', () => {
   const languages = ['cpp', 'cc', 'h', 'python', 'py', 'kotlin', 'kt'];
-  assert.equal(isSupportedFile('/w/src/a.cc.hatch', languages), false);
+  assert.equal(isSupportedFile('/w/src/a.cc.sirp', languages), false);
   assert.equal(isSupportedFile('/w/README.md', languages), false);
   assert.equal(isSupportedFile('/w/src/a.tar.cc', languages), true, 'the last extension is the one');
 });
 
-test('the refusal says how to go on: set hatch.language (README)', () => {
-  assert.match(unsupportedMessage('/w/BUILD.gn', '0.4.0', ['cpp']), /hatch\.language/);
+test('the refusal says how to go on: set sir.language (README)', () => {
+  assert.match(unsupportedMessage('/w/BUILD.gn', '0.4.0', ['cpp']), /sir\.language/);
   const many = Array.from({ length: 40 }, (_, i) => `l${i}`);
   assert.ok(unsupportedMessage('/w/x.gn', '0.4.0', many).length < 300, 'a long language list is cut short');
+});
+
+// ---- LruMap, what mutation testing found unchecked (docs/15-test-plan.md, stage 4b) ----
+
+test('LruMap: asking for a missing key adds nothing', () => {
+  const lru = new LruMap<string, number>(2);
+  assert.equal(lru.get('missing'), undefined);
+  assert.equal(lru.size, 0);
+  assert.equal(lru.has('missing'), false);
+});
+
+test('LruMap: setting a key again makes it the most recent', () => {
+  const evicted: string[] = [];
+  const lru = new LruMap<string, number>(2, (key) => evicted.push(key));
+  lru.set('a', 1);
+  lru.set('b', 2);
+  lru.set('a', 10); // a is now newer than b
+  lru.set('c', 3);
+  assert.deepEqual(evicted, ['b']);
+  assert.equal(lru.has('a'), true);
+  assert.deepEqual([...lru.values()].sort(), [10, 3].sort());
+});
+
+test('LruMap: one without a listener still evicts', () => {
+  const lru = new LruMap<string, number>(1);
+  lru.set('a', 1);
+  lru.set('b', 2);
+  assert.deepEqual([...lru.keys()], ['b']);
+});
+
+// ---- the words of the states, what the status bar shows (stage 4b) ----
+
+test('the fallback when pair gives no reason is a sentence too', () => {
+  assert.match(describePairReason(undefined), /no pair/);
+});
+
+test('each state that is not ready has its own word, icon and way out', () => {
+  const cases = [
+    [{ kind: 'parse-error', mdLine: 5, message: 'line 5: no gutter' }, 'parse error', 'error', 'show-parse-error'],
+    [{ kind: 'unlinked', reason: undefined }, 'not linked', 'question', 'show-header'],
+    [{ kind: 'no-target', path: '/w/src/gone.cc' }, 'file missing', 'error', 'show-header'],
+    [{ kind: 'no-baseline', path: '/w/a.cc', reason: 'r', gitReason: 'no-such-file' }, 'orphaned', 'error', 'delete-patch'],
+    [{ kind: 'no-baseline', path: '/w/a.cc', reason: 'r', gitReason: 'no-such-branch' }, 'base not here', 'error', 'show-base'],
+    [{ kind: 'no-baseline', path: '/w/a.cc', reason: 'r', gitReason: 'no-commits' }, 'no commits', 'question', 'show-base'],
+    [{ kind: 'no-baseline', path: '/w/a.cc', reason: 'r' }, 'no baseline', 'error', 'show-log'],
+    [{ kind: 'failed', message: 'm', transient: false }, 'failed', 'error', 'show-log'],
+  ] as const;
+  for (const [state, short, icon, remedy] of cases) {
+    const view = viewOf(state, 'a.cc.sirp');
+    assert.deepEqual([view.short, view.icon, view.remedy], [short, icon, remedy], JSON.stringify(state));
+  }
+});
+
+test('an unlinked patch is named, with why and how to link it', () => {
+  const view = viewOf({ kind: 'unlinked', reason: 'two-patches' }, 'a.cc.sirp');
+  assert.match(view.message, /a\.cc\.sirp/);
+  assert.ok(view.message.includes(describePairReason('two-patches')));
+  assert.match(view.message, /Target:/);
+});
+
+test('a base that is not here, or a repository with no commits, names the file', () => {
+  const missing = viewOf({ kind: 'no-baseline', path: '/w/src/a.cc', reason: 'no branch main', gitReason: 'no-such-branch' }, 'a.cc.sirp');
+  assert.match(missing.message, /a\.cc.*fetch.*no branch main/);
+  const empty = viewOf({ kind: 'no-baseline', path: '/w/src/a.cc', reason: 'r', gitReason: 'no-commits' }, 'a.cc.sirp');
+  assert.match(empty.message, /a\.cc.*no commits/);
 });

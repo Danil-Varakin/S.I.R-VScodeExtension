@@ -11,10 +11,10 @@ export type IndexBase =
 
 const REBUILD_DELAY_MS = 300;
 
-/** Each entry holds a whole `.hatch` and a whole baseline; they are not free to keep. */
+/** Each entry holds a whole `.sirp` and a whole baseline; they are not free to keep. */
 const MAX_ENTRIES = 32;
 
-/** The one piece of state navigation has: the table of links for one `.hatch`. */
+/** The one piece of state navigation has: the table of links for one `.sirp`. */
 export interface PatchIndex {
   readonly mdUri: vscode.Uri;
   readonly mdText: string;
@@ -50,12 +50,12 @@ export type IndexState =
 
 export interface IndexChange {
   readonly mdUri: vscode.Uri;
-  /** Undefined when the cache forgot this `.hatch`: whatever was drawn from it goes too. */
+  /** Undefined when the cache forgot this `.sirp`: whatever was drawn from it goes too. */
   readonly state: IndexState | undefined;
 }
 
 /**
- * The editor's side of the index store: which `.hatch` changed, closed or is on screen, told
+ * The editor's side of the index store: which `.sirp` changed, closed or is on screen, told
  * in the store's plain keys; the store decides what that makes stale.
  */
 export class PatchIndexCache implements vscode.Disposable {

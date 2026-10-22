@@ -65,3 +65,48 @@ test('nothing rewriting or deleting is ever the preferred action', () => {
   for (const a of all) if (a.repair === 'regenerate' || a.repair === 'delete-patch') assert.equal(a.preferred, false, a.title);
   assert.deepEqual(repairsForState('no-baseline', 'no-such-branch'), []);
 });
+
+// ---- what mutation testing found unchecked (docs/15-test-plan.md, stage 4c) ----
+
+const failure = (over: object): NonNullable<HunkLink['failure']> => ({ kind: 'MatchError', message: 'm', ...over }) as NonNullable<HunkLink['failure']>;
+const repairs = (h: HunkLink, kind: 'placed' | 'drifted' | 'unresolved', hunks: HunkLink[] = []): string[] =>
+  repairsFor(h, kind === 'placed' ? { kind, line: 3 } : { kind }, hunks).map((a) => a.repair);
+
+test('each action is the one its title says', () => {
+  const ambiguous = hunk({ status: 'ambiguous', failure: failure({ candidates: [1, 2] }) });
+  assert.deepEqual(repairs(ambiguous, 'unresolved'), ['show-candidates', 'regenerate']);
+  const dependent = hunk({ index: 1, status: 'no-match', dependsOnEarlier: true });
+  assert.deepEqual(repairs(dependent, 'unresolved', [hunk({ index: 0, mdSpan: [3, 6] }), dependent]), ['go-to-earlier', 'regenerate']);
+  assert.deepEqual(repairsForState('no-baseline', 'no-such-file').map((a) => a.title), ['Delete Patch…'], 'README');
+});
+
+test('an ambiguous hunk with no places listed, or a missing one with places, offers no places', () => {
+  const none = hunk({ status: 'ambiguous', failure: failure({ candidates: [] }) });
+  assert.deepEqual(titles(none, 'unresolved'), ['Regenerate Patch'], 'never "Show the 0 Places"');
+  const missing = hunk({ status: 'no-match', failure: failure({ candidates: [1, 2] }) });
+  assert.deepEqual(titles(missing, 'unresolved'), ['Regenerate Patch']);
+});
+
+test('how far it got is offered only for a hunk that does not land', () => {
+  const drifted = hunk({ failure: failure({ origPos: 40 }) });
+  assert.deepEqual(titles(drifted, 'drifted'), ['Regenerate Patch']);
+});
+
+test('a dependent hunk that lands is offered no jump', () => {
+  const dependent = hunk({ index: 1, dependsOnEarlier: true });
+  assert.deepEqual(titles(dependent, 'placed', [hunk({ index: 0, mdSpan: [3, 6] }), dependent]), []);
+});
+
+test('the jump comes after how far it got, and is then not the preferred one', () => {
+  const dependent = hunk({ index: 1, status: 'no-match', dependsOnEarlier: true, failure: failure({ origPos: 40 }) });
+  assert.deepEqual(titles(dependent, 'unresolved', [hunk({ index: 0, mdSpan: [3, 6] }), dependent]), [
+    '*Show How Far It Got',
+    'Go to Hunk 1',
+    'Regenerate Patch',
+  ]);
+});
+
+test('the earlier hunk is found by its index, whatever order the table lists them in', () => {
+  const table = [hunk({ index: 2, mdSpan: [13, 16] }), hunk({ index: 1, mdSpan: [8, 11] }), hunk({ index: 0, mdSpan: [3, 6] })];
+  assert.equal(earlierHunkOf(table, 3)?.index, 2);
+});
