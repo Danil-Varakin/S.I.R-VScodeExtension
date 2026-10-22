@@ -37,6 +37,12 @@ function recordingLog(): Log & { lines: string[] } {
 const spawns = (log: { lines: string[] }): number => log.lines.filter((l) => l.startsWith('info spawning service')).length;
 const reached = (log: { lines: string[] }, method: string): number => log.lines.filter((l) => l === `stderr got ${method}`).length;
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+/** `reached`, once `want` lines came or a second passed: stderr and the replies are two
+ *  pipes, and a line of stderr may come after the reply it belongs to. */
+const reachedSoon = async (log: { lines: string[] }, method: string, want: number): Promise<number> => {
+  for (let i = 0; i < 50 && reached(log, method) < want; i++) await sleep(20);
+  return reached(log, method);
+};
 const restarts = (log: { lines: string[] }): string[] => log.lines.filter((l) => l.startsWith('info restarting service'));
 const withinSecond = <T>(p: Promise<T>): Promise<T | Error> =>
   Promise.race([outcome(p), sleep(1_000).then(() => new Error('still waiting after a second'))]);
@@ -88,7 +94,7 @@ test('a core that dies under a request fails it with ServiceGoneError, and the n
     const next = await client.request('pair', { path: CODE });
     assert.equal(next.kind, 'code');
     assert.equal(spawns(log), 2);
-    assert.equal(reached(log, 'version'), 2, 'the new core is asked its version again');
+    assert.equal(await reachedSoon(log, 'version', 2), 2, 'the new core is asked its version again');
   });
 });
 
@@ -129,7 +135,7 @@ test('requests that arrive together before the handshake share one core and one 
     assert.equal(answers.length, 6);
     assert.equal(spawns(log), 1);
     await sleep(20);
-    assert.equal(reached(log, 'version'), 1);
+    assert.equal(await reachedSoon(log, 'version', 1), 1);
   });
 });
 
@@ -146,7 +152,7 @@ test('a handshake the core refused, staying up, is asked again too', async () =>
   await withScript('refuse-first-version', async (client, log) => {
     await assert.rejects(client.version(), /not ready/);
     assert.equal((await client.version()).protocol, 5);
-    assert.equal(reached(log, 'version'), 2);
+    assert.equal(await reachedSoon(log, 'version', 2), 2);
     assert.equal(spawns(log), 1, 'the same core, asked twice');
   }, { SIR_MARKER: join(dir, 'refused-once') });
 });
