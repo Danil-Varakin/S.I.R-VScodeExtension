@@ -465,7 +465,12 @@ test('a core that cannot be started is gone, and says why', async () => {
   assert.match(gone[0]!, /^service failed to spawn: /);
 });
 
-test('a write into a core that stopped reading is logged, not thrown at the extension host', async () => {
+test('a write into a core that stopped reading is logged, not thrown at the extension host', async (t) => {
+  if (process.platform === 'win32') {
+    // a pipe on Windows takes the write while the process that let go of it lives on
+    t.skip('a write into a closed pipe fails only on POSIX');
+    return;
+  }
   const saved = process.env['SIR_SCRIPT'];
   process.env['SIR_SCRIPT'] = 'deaf';
   const log = recordingLog();
